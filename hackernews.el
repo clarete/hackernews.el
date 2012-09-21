@@ -41,7 +41,9 @@
 (defun hackernews ()
   "The entry point of our client"
   (interactive)
-  (hackernews-retrieve))
+  (hackernews-format-results
+   (hackernews-parse
+    (hackernews-retrieve hackernews-url))))
 
 ;;; UI Functions
 
@@ -62,6 +64,10 @@
       'mouse-face 'highlight))))
 
 (defun hackernews-render-post (post)
+  "Render a single post to the current buffer
+
+Add the post title as a link, and print the points and number of
+comments."
   (princ (format "[%s]\t" (cdr (assoc 'points post))))
   (hackernews-create-link-in-buffer
    (cdr (assoc 'title post))
@@ -73,6 +79,7 @@
   (princ "\n"))
 
 (defun hackernews-format-results (results)
+  "Create the buffer to render all the info"
   (with-output-to-temp-buffer "*hackernews*"
     (switch-to-buffer-other-window "*hackernews*")
     (setq font-lock-mode nil)
@@ -82,17 +89,19 @@
 
 ;;; Retrieving and parsing
 
-(defun hackernews-retrieve ()
-  (url-retrieve
-   
-   '(lambda (status)
-      (with-current-buffer (current-buffer)
-        (hackernews-format-results
-         (let ((content (cdr (split-string (buffer-string) "\n\n"))))
-           (hackernews-parse content)))))))
+(defun hackernews-retrieve (url)
+  (let ((buffer (url-retrieve-synchronously url))
+        (json nil))
+    (save-excursion
+      (set-buffer buffer)
+      (goto-char (point-min))
+      (re-search-forward "^$" nil 'move)
+      (setq json (buffer-substring-no-properties (point) (point-max)))
+      (kill-buffer (current-buffer)))
+    json))
 
 (defun hackernews-parse (contents)
-  (json-read-file "hackerstuff.json"))
+  (json-read-from-string contents))
 
 (provide 'hackernews)
 
