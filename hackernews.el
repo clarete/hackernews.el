@@ -93,3 +93,7 @@
 
 (defun hackernews-parse (contents)
   (json-read-file "hackerstuff.json"))
+
+(provide 'hackernews)
+
+;;; hackernews.el ends here
