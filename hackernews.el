@@ -41,9 +41,12 @@
 (defun hackernews ()
   "The entry point of our client"
   (interactive)
-  (hackernews-format-results
-   (hackernews-parse
-    (hackernews-retrieve hackernews-url))))
+  (condition-case ex
+      (hackernews-format-results
+       (hackernews-parse
+        (hackernews-retrieve hackernews-url)))
+    ('error
+     (message (format "Bad news, bro: %s" (car (cdr ex)))))))
 
 ;;; UI Functions
 
@@ -95,6 +98,8 @@ comments."
     (save-excursion
       (set-buffer buffer)
       (goto-char (point-min))
+      (when (not (string-match "200 OK" (buffer-string)))
+        (error "Problem connecting to the server"))
       (re-search-forward "^$" nil 'move)
       (setq json (buffer-substring-no-properties (point) (point-max)))
       (kill-buffer (current-buffer)))
