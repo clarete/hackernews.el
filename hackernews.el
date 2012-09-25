@@ -38,6 +38,7 @@
 
 ;;; Interactive functions
 
+;;;###autoload
 (defun hackernews ()
   "The entry point of our client"
   (interactive)
