@@ -67,12 +67,21 @@
       'keymap map
       'mouse-face 'highlight))))
 
+
+(defun hackernews-space-fill (string n)
+  "Makes sure that string is at least n characters long, and
+   if it isn't, it adds SPACE-characters to the end"
+  (while (< (length string) n)
+    (setf string (concat string " ")))
+  (identity string))
+
 (defun hackernews-render-post (post)
   "Render a single post to the current buffer
 
 Add the post title as a link, and print the points and number of
 comments."
-  (princ (format "[%s]\t" (cdr (assoc 'points post))))
+  (princ (hackernews-space-fill 
+          (format "[%s]" (cdr (assoc 'points post))) 6))
   (hackernews-create-link-in-buffer
    (cdr (assoc 'title post))
    (cdr (assoc 'url post)))
