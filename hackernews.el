@@ -36,6 +36,13 @@
 (defvar hackernews-url "http://api.ihackernews.com/page"
   "The url to grab the list of news")
 
+(defvar hackernews-map (make-sparse-keymap)
+  "The keymap to use with hackernews")
+
+(if hackernews-map
+    (define-key hackernews-map (kbd "g") 'hackernews)
+    (define-key hackernews-map (kbd "q") 'bury-buffer))
+
 ;;; Interactive functions
 
 ;;;###autoload
@@ -94,8 +101,9 @@ comments."
 (defun hackernews-format-results (results)
   "Create the buffer to render all the info"
   (with-output-to-temp-buffer "*hackernews*"
-    (switch-to-buffer-other-window "*hackernews*")
+    (switch-to-buffer "*hackernews*")
     (setq font-lock-mode nil)
+    (use-local-map hackernews-map)
     (princ "Your hacker News Emacs client\n\n")
     (mapcar #'hackernews-render-post
              (cdr (assoc 'items results)))))
