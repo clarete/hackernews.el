@@ -30,6 +30,7 @@
 
 (require 'json)
 (require 'url)
+(eval-when-compile (require 'cl))
 
 ;; "http://apihackernews.herokuapp.com/"
 
