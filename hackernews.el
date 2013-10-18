@@ -31,10 +31,13 @@
 (require 'json)
 (require 'url)
 
-;; "http://apihackernews.herokuapp.com/"
-
-(defvar hackernews-url "http://api.ihackernews.com/page"
+(defvar hackernews-url "http://rhn.herokuapp.com/"
   "The url to grab the list of news")
+
+;; Useful for development
+;;
+;; (setq hackernews-url "http://127.0.0.1:5000/")
+
 
 ;;; Interactive functions
 
@@ -45,9 +48,10 @@
   (condition-case ex
       (hackernews-format-results
        (hackernews-parse
-        (hackernews-retrieve hackernews-url)))
+        (hackernews-retrieve
+         (hackernews-encode-req "HN.hotpage"))))
     ('error
-     (message (format "Bad news, bro: %s" (car (cdr ex)))))))
+     (message (format "Bad news: %s" (car (cdr ex)))))))
 
 ;;; UI Functions
 
@@ -81,15 +85,24 @@
 Add the post title as a link, and print the points and number of
 comments."
   (princ (hackernews-space-fill 
-          (format "[%s]" (cdr (assoc 'points post))) 6))
+          (format "[%s]" (cdr (assoc 'voting post))) 6))
   (hackernews-create-link-in-buffer
    (cdr (assoc 'title post))
-   (cdr (assoc 'url post)))
-  (insert
-   (propertize
-    (format " (%d comments)" (cdr (assoc 'commentCount post)))
-    'face '(:foreground "gray")))
-  (princ "\n"))
+   (cdr (assoc 'link post)))
+  (let ((comment-count (cdr (assoc 'comments_count post))))
+    (hackernews-create-link-in-buffer
+     (format " (%s comments)" comment-count)
+     "")
+    (princ "\n")))
+    ;; (hackernews-create-link-in-buffer
+    ;;  (format " (%s comments)" comment-count)
+    ;;  (concat "%s/item?id=%d" hackernews-url (cdr (assoc 'id post)))))
+
+  ;; (insert
+  ;;  (propertize
+  ;;   (format " (%d comments)" (cdr (assoc 'commentCount post)))
+  ;;   'face '(:foreground "gray")))
+  ;; (princ "\n"))
 
 (defun hackernews-format-results (results)
   "Create the buffer to render all the info"
@@ -98,9 +111,16 @@ comments."
     (setq font-lock-mode nil)
     (princ "Your hacker News Emacs client\n\n")
     (mapcar #'hackernews-render-post
-             (cdr (assoc 'items results)))))
+             (cdr (assoc 'result results)))))
 
 ;;; Retrieving and parsing
+
+(defun hackernews-encode-req (obj)
+  (let ((my-hash (make-hash-table :test 'equal)))
+    (puthash "symbol" obj my-hash)
+    (concat hackernews-url "api/?r="
+            (url-hexify-string
+             (json-encode my-hash)))))
 
 (defun hackernews-retrieve (url)
   (let ((buffer (url-retrieve-synchronously url))
