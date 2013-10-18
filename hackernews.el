@@ -104,10 +104,8 @@ comments."
 ;;; Retrieving and parsing
 
 (defun hackernews-retrieve (url)
-  (let ((buffer (url-retrieve-synchronously url))
-        (json nil))
-    (save-excursion
-      (set-buffer buffer)
+  (let (json)
+    (with-current-buffer (url-retrieve-synchronously url)
       (goto-char (point-min))
       (when (not (string-match "200 OK" (buffer-string)))
         (error "Problem connecting to the server"))
