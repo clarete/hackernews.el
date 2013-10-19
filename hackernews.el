@@ -92,10 +92,9 @@ comments."
   (hackernews-create-link-in-buffer
    (cdr (assoc 'title post))
    (cdr (assoc 'url post)))
-  (insert
-   (propertize
-    (format " (%d comments)" (cdr (assoc 'commentCount post)))
-    'face '(:foreground "gray")))
+  (hackernews-create-link-in-buffer
+   (format " (%d comments)" (cdr (assoc 'commentCount post)))
+   (format "https://news.ycombinator.com/item?id=%d" (cdr (assoc 'id post))))
   (princ "\n"))
 
 (defun hackernews-format-results (results)
