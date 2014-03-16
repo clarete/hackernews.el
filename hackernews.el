@@ -23,7 +23,7 @@
 ;;
 ;; This is a very simple extention to search for files and for contents
 ;; inside files.
-;; 
+;;
 ;; Enjoy!
 
 ;;; Code:
@@ -42,7 +42,7 @@
 
 (if hackernews-map
     (define-key hackernews-map (kbd "g") 'hackernews)
-    (define-key hackernews-map (kbd "q") 'bury-buffer))
+  (define-key hackernews-map (kbd "q") 'bury-buffer))
 
 ;;; Interactive functions
 
@@ -58,6 +58,16 @@
      (message (format "Bad news, bro: %s" (car (cdr ex)))))))
 
 ;;; UI Functions
+
+(defun hackernews-comment-url (id)
+  (format "https://news.ycombinator.com/item?id=%s" id))
+
+(defun hackernews-link-of-url (url)
+  (lexical-let ((url url)
+		(hackernews-item "/comments/"))
+    (if (string-prefix-p hackernews-item url)
+	(hackernews-comment-url (substring url (length hackernews-item)))
+      url)))
 
 (defun hackernews-create-link-in-buffer (title url)
   "Insert clickable string inside a buffer"
@@ -83,19 +93,23 @@
     (setf string (concat string " ")))
   (identity string))
 
+(defun hackernews-encoding (string)
+  "encoding"
+  (decode-coding-string
+   (encode-coding-string string 'utf-8) 'utf-8))
+
 (defun hackernews-render-post (post)
   "Render a single post to the current buffer
-
 Add the post title as a link, and print the points and number of
 comments."
-  (princ (hackernews-space-fill 
+  (princ (hackernews-space-fill
           (format "[%s]" (cdr (assoc 'points post))) 6))
   (hackernews-create-link-in-buffer
-   (cdr (assoc 'title post))
-   (cdr (assoc 'url post)))
+   (hackernews-encoding (cdr (assoc 'title post)))
+   (hackernews-link-of-url (hackernews-encoding (cdr (assoc 'url post)))))
   (hackernews-create-link-in-buffer
    (format " (%d comments)" (cdr (assoc 'commentCount post)))
-   (format "https://news.ycombinator.com/item?id=%d" (cdr (assoc 'id post))))
+   (hackernews-comment-url (cdr (assoc 'id post))))
   (princ "\n"))
 
 (defun hackernews-format-results (results)
@@ -104,9 +118,8 @@ comments."
     (switch-to-buffer "*hackernews*")
     (setq font-lock-mode nil)
     (use-local-map hackernews-map)
-    (princ "Your hacker News Emacs client\n\n")
     (mapcar #'hackernews-render-post
-             (cdr (assoc 'items results)))))
+	    (cdr (assoc 'items results)))))
 
 ;;; Retrieving and parsing
 
