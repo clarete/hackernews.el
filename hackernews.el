@@ -34,6 +34,16 @@
 
 ;; "http://apihackernews.herokuapp.com/"
 
+(defgroup hackernews nil
+  "Simple hackernews emacs client"
+  :group 'external
+  :prefix "hackernews-")
+
+(defface hackernews-link-face
+  '((t (:foreground "green")))
+  "Face used for links to articles"
+  :group 'hackernews)
+
 (defvar hackernews-url "http://api.ihackernews.com/page"
   "The url to grab the list of news")
 
@@ -82,7 +92,7 @@
     (insert
      (propertize
       title
-      'face '(:foreground "green")
+      'face 'hackernews-link-face
       'keymap map
       'mouse-face 'highlight))))
 
