@@ -41,8 +41,9 @@
   "The keymap to use with hackernews")
 
 (if hackernews-map
-    (define-key hackernews-map (kbd "g") 'hackernews)
-  (define-key hackernews-map (kbd "q") 'bury-buffer))
+    (progn
+      (define-key hackernews-map (kbd "g") 'hackernews)
+      (define-key hackernews-map (kbd "q") 'bury-buffer)))
 
 ;;; Interactive functions
 
