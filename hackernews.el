@@ -87,6 +87,8 @@
                 (map (make-sparse-keymap)))
     (define-key map (kbd "<RET>")
       #'(lambda (e) (interactive "p") (browse-url url)))
+    (define-key map (kbd "t")
+      #'(lambda (e) (interactive "p") (browse-url-text-emacs url)))
     (define-key map (kbd "<down-mouse-1>")
       #'(lambda (e) (interactive "p") (browse-url url)))
     (insert
