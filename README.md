@@ -6,7 +6,10 @@ the data.
 
 This version is able to list posts present in the main page, as well as
 their points and comment count. You can also click (or `RET`) in the
-post titles to open them in a browser.
+post titles to open them in a browser. 
+
+Or you can press 't' to open the article in text only mode in emacs itself. 
+It may not work for some articles due to the page structure.
 
 The next versions will implement the upvote command and the possibility
 to interact with comments.
