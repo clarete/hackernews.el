@@ -56,7 +56,9 @@
 (if hackernews-map
     (progn
       (define-key hackernews-map (kbd "g") 'hackernews)
-      (define-key hackernews-map (kbd "q") 'bury-buffer)))
+      (define-key hackernews-map (kbd "q") 'bury-buffer)
+      (define-key hackernews-map (kbd "n") 'next-line)
+      (define-key hackernews-map (kbd "p") 'previous-line)))
 
 ;;; Interactive functions
 
