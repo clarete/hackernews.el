@@ -44,8 +44,11 @@
   "Face used for links to articles"
   :group 'hackernews)
 
-(defvar hackernews-url "http://api.ihackernews.com/page"
-  "The url to grab the list of news")
+(defvar hackernews-top-stories-url "https://hacker-news.firebaseio.com/v0/topstories.json"
+  "The url to grab the top 100 story ids")
+
+(defvar hackernews-item-url "https://hacker-news.firebaseio.com/v0/item/%s.json"
+  "The url to grab an item's details")
 
 (defvar hackernews-map (make-sparse-keymap)
   "The keymap to use with hackernews")
@@ -63,8 +66,8 @@
   (interactive)
   (condition-case ex
       (hackernews-format-results
-       (hackernews-parse
-        (hackernews-retrieve hackernews-url)))
+       (mapcar 'hackernews-get-item
+               (hackernews-top-stories 20)))
     ('error
      (message (format "Bad news, bro: %s" (car (cdr ex)))))))
 
@@ -116,12 +119,12 @@
 Add the post title as a link, and print the points and number of
 comments."
   (princ (hackernews-space-fill
-          (format "[%s]" (cdr (assoc 'points post))) 6))
+          (format "[%s]" (cdr (assoc 'score post))) 6))
   (hackernews-create-link-in-buffer
    (hackernews-encoding (cdr (assoc 'title post)))
    (hackernews-link-of-url (hackernews-encoding (cdr (assoc 'url post)))))
   (hackernews-create-link-in-buffer
-   (format " (%d comments)" (cdr (assoc 'commentCount post)))
+   (format " (%d comments)" (length (cdr (assoc 'kids post))))
    (hackernews-comment-url (cdr (assoc 'id post))))
   (princ "\n"))
 
@@ -131,10 +134,21 @@ comments."
     (switch-to-buffer "*hackernews*")
     (setq font-lock-mode nil)
     (use-local-map hackernews-map)
-    (mapcar #'hackernews-render-post
-	    (cdr (assoc 'items results)))))
+    (mapcar 'hackernews-render-post results)))
 
 ;;; Retrieving and parsing
+
+(defun hackernews-top-stories (&optional limit)
+  (reverse (last (reverse (append (hackernews-retrieve-and-parse hackernews-top-stories-url) nil)) limit))
+  )
+
+(defun hackernews-get-item (id)
+  (hackernews-retrieve-and-parse (format hackernews-item-url id))
+  )
+
+(defun hackernews-retrieve-and-parse (url)
+  (hackernews-parse (hackernews-retrieve url))
+  )
 
 (defun hackernews-retrieve (url)
   (let (json)
