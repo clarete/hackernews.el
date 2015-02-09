@@ -52,10 +52,17 @@
 (defvar hackernews-map (make-sparse-keymap)
   "The keymap to use with hackernews")
 
+(defun hackernews-internal-browser (url)
+  (if (featurep 'eww)
+      (eww-browse-url url)
+    (browse-url-text-emacs url)))
+
 (if hackernews-map
     (progn
       (define-key hackernews-map (kbd "g") 'hackernews)
-      (define-key hackernews-map (kbd "q") 'bury-buffer)))
+      (define-key hackernews-map (kbd "q") 'bury-buffer)
+      (define-key hackernews-map (kbd "n") 'next-line)
+      (define-key hackernews-map (kbd "p") 'previous-line)))
 
 ;;; Interactive functions
 
@@ -90,7 +97,7 @@
     (define-key map (kbd "<RET>")
       #'(lambda (e) (interactive "p") (browse-url url)))
     (define-key map (kbd "t")
-      #'(lambda (e) (interactive "p") (browse-url-text-emacs url)))
+      #'(lambda (e) (interactive "p") (hackernews-internal-browser url)))
     (define-key map (kbd "<down-mouse-1>")
       #'(lambda (e) (interactive "p") (browse-url url)))
     (insert
