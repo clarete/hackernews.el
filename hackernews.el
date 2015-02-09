@@ -69,7 +69,7 @@
        (mapcar 'hackernews-get-item
                (hackernews-top-stories 20)))
     ('error
-     (message (format "Bad news, bro: %s" (car (cdr ex)))))))
+     (message (format "hackernewsclient error: %s" (car (cdr ex)))))))
 
 ;;; UI Functions
 
