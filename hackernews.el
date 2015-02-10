@@ -58,12 +58,39 @@
       (eww-browse-url url)
     (browse-url-text-emacs url)))
 
+(defun hackernews-first-item ()
+  (interactive)
+  (goto-char (point-min))
+  (hackernews-next-item))
+
+(defun hackernews-next-item ()
+  (interactive)
+  (re-search-forward "^\[\[0-9]+\] +" nil t 1))
+
+(defun hackernews-previous-item ()
+  (interactive)
+  (forward-line -1)
+  (beginning-of-line)
+  (hackernews-next-item))
+
+(defun hackernews-next-comment ()
+  (interactive)
+  (re-search-forward " \([0-9]+ comments\)$" nil t 1)
+  (search-backward "("))
+
+(defun hackernews-previous-comment ()
+  (interactive)
+  (forward-line -1)
+  (hackernews-next-comment))
+
 (if hackernews-map
     (progn
       (define-key hackernews-map (kbd "g") 'hackernews)
       (define-key hackernews-map (kbd "q") 'bury-buffer)
-      (define-key hackernews-map (kbd "n") 'next-line)
-      (define-key hackernews-map (kbd "p") 'previous-line)))
+      (define-key hackernews-map (kbd "n") 'hackernews-next-item)
+      (define-key hackernews-map (kbd "p") 'hackernews-previous-item)
+      (define-key hackernews-map (kbd "<tab>") 'hackernews-next-comment)
+      (define-key hackernews-map (kbd "<backtab>") 'hackernews-previous-comment)))
 
 ;;; Interactive functions
 
@@ -76,7 +103,8 @@
        (mapcar 'hackernews-get-item
                (hackernews-top-stories 20)))
     ('error
-     (message (format "hackernewsclient error: %s" (car (cdr ex)))))))
+     (message (format "hackernewsclient error: %s" (car (cdr ex))))))
+  (hackernews-first-item))
 
 ;;; UI Functions
 
