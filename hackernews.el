@@ -44,6 +44,9 @@
   "Face used for links to articles"
   :group 'hackernews)
 
+(defvar hackernews-top-story-limit 20
+  "Retrieve details for at most this many stories. This should not exceed 100.")
+
 (defvar hackernews-top-stories-url "https://hacker-news.firebaseio.com/v0/topstories.json"
   "The url to grab the top 100 story ids")
 
@@ -101,7 +104,7 @@
   (condition-case ex
       (hackernews-format-results
        (mapcar 'hackernews-get-item
-               (hackernews-top-stories 20)))
+               (hackernews-top-stories hackernews-top-story-limit)))
     ('error
      (message (format "hackernewsclient error: %s" (car (cdr ex))))))
   (hackernews-first-item))
