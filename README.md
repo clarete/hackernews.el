@@ -1,7 +1,7 @@
 # Simple hackernews emacs client
 
 It's simple because it doesn't actually interact with hackernews. It
-uses a non official http [api](http://api.ihackernews.com/page) to get
+uses an http [api](https://hacker-news.firebaseio.com/v0) to get
 the data.
 
 This version is able to list posts present in the main page, as well as
