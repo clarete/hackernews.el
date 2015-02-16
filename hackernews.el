@@ -68,7 +68,7 @@
 
 (defun hackernews-next-item ()
   (interactive)
-  (re-search-forward "^\[\[0-9]+\] +" nil t 1))
+  (re-search-forward "^\[\[0-9]+\]\s*" nil t 1))
 
 (defun hackernews-previous-item ()
   (interactive)
