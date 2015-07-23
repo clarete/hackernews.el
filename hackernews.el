@@ -160,7 +160,9 @@ comments."
           (format "[%s]" (cdr (assoc 'score post))) 6))
   (hackernews-create-link-in-buffer
    (hackernews-encoding (cdr (assoc 'title post)))
-   (hackernews-link-of-url (hackernews-encoding (cdr (assoc 'url post)))))
+   (if (assoc 'url post)
+       (hackernews-link-of-url (hackernews-encoding (cdr (assoc 'url post))))
+     (hackernews-comment-url (cdr (assoc 'id post)))))
   (hackernews-create-link-in-buffer
    (format " (%d comments)" (length (cdr (assoc 'kids post))))
    (hackernews-comment-url (cdr (assoc 'id post))))
