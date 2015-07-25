@@ -154,19 +154,24 @@
 
 (defun hackernews-render-post (post)
   "Render a single post to the current buffer
-Add the post title as a link, and print the points and number of
-comments."
-  (princ (hackernews-space-fill
-          (format "[%s]" (cdr (assoc 'score post))) 6))
-  (hackernews-create-link-in-buffer
-   (hackernews-encoding (cdr (assoc 'title post)))
-   (if (assoc 'url post)
-       (hackernews-link-of-url (hackernews-encoding (cdr (assoc 'url post))))
-     (hackernews-comment-url (cdr (assoc 'id post)))))
-  (hackernews-create-link-in-buffer
-   (format " (%d comments)" (length (cdr (assoc 'kids post))))
-   (hackernews-comment-url (cdr (assoc 'id post))))
-  (princ "\n"))
+  Add the post title as a link, and print the points and number of
+  comments."
+  (let ((id (cdr (assoc 'id post)))
+        (title (cdr (assoc 'title post)))
+        (url (cdr (assoc 'url post)))
+        (score (cdr (assoc 'score post)))
+        (kids (cdr (assoc 'kids post))))
+    (princ (hackernews-space-fill
+            (format "[%s]" score) 6))
+    (hackernews-create-link-in-buffer
+     (hackernews-encoding title)
+     (if url
+         (hackernews-link-of-url (hackernews-encoding url))
+       (hackernews-comment-url id)))
+    (hackernews-create-link-in-buffer
+     (format " (%d comments)" (length kids))
+     (hackernews-comment-url id))
+    (princ "\n")))
 
 (defun hackernews-format-results (results)
   "Create the buffer to render all the info"
