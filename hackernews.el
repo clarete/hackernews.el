@@ -44,6 +44,16 @@
   "Face used for links to articles"
   :group 'hackernews)
 
+(defface hackernews-comment-count-face
+  '((t (:foreground "green")))
+  "Face used for comment counts"
+  :group 'hackernews)
+
+(defface hackernews-score-face
+  '((t (:foreground nil)))
+  "Face used for the score of an article"
+  :group 'hackernews)
+
 (defvar hackernews-top-story-limit 20
   "Retrieve details for at most this many stories. This should not exceed 100.")
 
@@ -121,10 +131,11 @@
 	(hackernews-comment-url (substring url (length hackernews-item)))
       url)))
 
-(defun hackernews-create-link-in-buffer (title url)
+(defun hackernews-create-link-in-buffer (title url face)
   "Insert clickable string inside a buffer"
   (lexical-let ((title title)
                 (url url)
+                (face face)
                 (map (make-sparse-keymap)))
     (define-key map (kbd "<RET>")
       #'(lambda (e) (interactive "p") (browse-url url)))
@@ -135,7 +146,7 @@
     (insert
      (propertize
       title
-      'face 'hackernews-link-face
+      'face face
       'keymap map
       'mouse-face 'highlight))))
 
@@ -161,16 +172,21 @@
         (url (cdr (assoc 'url post)))
         (score (cdr (assoc 'score post)))
         (kids (cdr (assoc 'kids post))))
-    (princ (hackernews-space-fill
-            (format "[%s]" score) 6))
+    (insert (hackernews-space-fill
+             (propertize
+              (format "[%s]" score)
+              'face 'hackernews-score-face)
+             6))
     (hackernews-create-link-in-buffer
      (hackernews-encoding title)
      (if url
          (hackernews-link-of-url (hackernews-encoding url))
-       (hackernews-comment-url id)))
+       (hackernews-comment-url id))
+     'hackernews-link-face)
     (hackernews-create-link-in-buffer
      (format " (%d comments)" (length kids))
-     (hackernews-comment-url id))
+     (hackernews-comment-url id)
+     'hackernews-comment-count-face)
     (princ "\n")))
 
 (defun hackernews-format-results (results)
