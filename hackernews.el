@@ -32,8 +32,6 @@
 (require 'eww nil :noerror)
 (eval-when-compile (require 'cl))
 
-;; "http://apihackernews.herokuapp.com/"
-
 (defgroup hackernews nil
   "Simple hackernews emacs client"
   :group 'external
@@ -168,7 +166,6 @@
       'keymap map
       'mouse-face 'highlight))))
 
-
 (defun hackernews-space-fill (string n)
   "Makes sure that string is at least n characters long, and
    if it isn't, it adds SPACE-characters to the end"
@@ -239,12 +236,10 @@ When OFFSET is given, ignore all list entries before the offset."
     (reverse (last (reverse (last hackernews-top-story-list reverse-offset)) limit))))
 
 (defun hackernews-get-item (id)
-  (hackernews-retrieve-and-parse (format hackernews-item-url id))
-  )
+  (hackernews-retrieve-and-parse (format hackernews-item-url id)))
 
 (defun hackernews-retrieve-and-parse (url)
-  (hackernews-parse (hackernews-retrieve url))
-  )
+  (hackernews-parse (hackernews-retrieve url)))
 
 (defun hackernews-retrieve (url)
   (let (json)
