@@ -213,7 +213,7 @@ existing buffer if available."
     (if (and append buf)
         (with-current-buffer buf
           (let ((inhibit-read-only t))
-            (end-of-buffer)
+            (goto-char (point-max))
             (mapcar 'hackernews-render-post results)))
       (with-output-to-temp-buffer buf-name
         (switch-to-buffer buf-name)
