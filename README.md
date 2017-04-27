@@ -4,15 +4,31 @@ It's simple because it doesn't actually interact with hackernews. It
 uses an http [api](https://hacker-news.firebaseio.com/v0) to get
 the data.
 
+
+## Navigation
+
 This version is able to list posts present in the main page, as well as
 their points and comment count. You can also click (or `RET`) in the
-post titles to open them in a browser. 
+post titles to open them in a browser.
 
-Or you can press 't' to open the article in text only mode in emacs itself. 
+Or you can press 't' to open the article in text only mode in emacs itself.
 It may not work for some articles due to the page structure.
 
 The next versions will implement the upvote command and the possibility
 to interact with comments.
+
+### Keymap
+Keybinding         | Description
+-------------------|------------------------------------------------------------
+<kbd>RET</kbd>     | Open post in default browser
+<kbd>t</kbd>     | Open post in text-mode (may not work for all articles)
+<kbd>n</kbd>       | Navigate to next post
+<kbd>p</kbd>       | Navigate to previous post
+<kbd>TAB</kbd>     | Navigate to next comment
+<kbd>Shift-TAB</kbd>| Navigate to previous comment
+<kbd>m</kbd>       | Load more posts
+<kbd>g</kbd>       | Refresh posts
+<kbd>q</kbd>       | Quit
 
 ## How it looks like
 
@@ -27,7 +43,7 @@ repo to your emacs config with the following code:
 
 ```lisp
 (require 'package)
-(add-to-list 'package-archives 
+(add-to-list 'package-archives
     '("marmalade" .
       "http://marmalade-repo.org/packages/"))
 (package-initialize)
@@ -68,4 +84,3 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 [![instanc.es Badge](https://instanc.es/bin/clarete/hackernews.el.png)](http://instanc.es)
 [![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/clarete/hackernews.el/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
-
