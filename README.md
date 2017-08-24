@@ -1,14 +1,14 @@
-# Simple hackernews emacs client
+# Simple Hacker News Emacs Client
 
-It's simple because it doesn't actually interact with hackernews. It
-uses an http [api](https://hacker-news.firebaseio.com/v0) to get
-the data.
+It's simple because it doesn't actually interact with Hacker News. It
+uses a HTTP [API](https://hacker-news.firebaseio.com/v0) to get the
+data.
 
 
 ## Navigation
 
 This version is able to list posts present in the main page, as well as
-their points and comment count. You can also click (or `RET`) in the
+their point and comment counts. You can also click (or `RET`) in the
 post titles to open them in a browser.
 
 Or you can press 't' to open the article in text only mode in emacs itself.
@@ -18,6 +18,7 @@ The next versions will implement the upvote command and the possibility
 to interact with comments.
 
 ### Keymap
+
 Keybinding         | Description
 -------------------|------------------------------------------------------------
 <kbd>RET</kbd>     | Open post in default browser
@@ -30,39 +31,47 @@ Keybinding         | Description
 <kbd>g</kbd>       | Refresh posts
 <kbd>q</kbd>       | Quit
 
-## How it looks like
+## Screenshot
 
 ![screenshot](https://raw.github.com/clarete/hackernews.el/master/Screenshot.png)
 
-## Installing
+## Installation
 
-### Emacs package
+### Using built-in package manager
 
-If you like this package repo stuff, you just need add the marmalade
-repo to your emacs config with the following code:
+Those who like the built-in package manager `package.el` need only
+point it to the Marmalade repository, which can be achieved by adding
+the following code to your `user-init-file`:
 
-```lisp
+```el
 (require 'package)
 (add-to-list 'package-archives
-    '("marmalade" .
-      "http://marmalade-repo.org/packages/"))
+             '("marmalade" .
+               "http://marmalade-repo.org/packages/"))
 (package-initialize)
 ```
 
-And then, run `M-x package-install`, the package name is `hackernews`.
+Then you can run `M-x package-install RET hackernews RET`.
 
-### Downloading the file
+### Manual download
 
-Copy the hackernews.el to your elisp directory and add the following
-code to your .emacs file:
+Place the `hackernews.el` file into a directory on your `load-path`
+and add the following code to your `user-init-file`:
 
-```lisp
+```el
+(autoload 'hackernews "hackernews" nil t)
+```
+
+Alternatively, if you always want the package loaded at startup
+(this slows down startup):
+
+```el
 (require 'hackernews)
 ```
 
-## Using it
+## Usage
 
-Just run `M-x hackernews`
+Just run `M-x hackernews`.
 
 ## License
 
