@@ -66,7 +66,18 @@ This should not exceed 100.")
 (defvar hackernews-item-url "https://hacker-news.firebaseio.com/v0/item/%s.json"
   "The URL format from which to grab an item's details.")
 
-(defvar hackernews-map (make-sparse-keymap)
+(defvar hackernews-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map "g"             #'hackernews)
+    (define-key map "q"             #'quit-window)
+    (define-key map "m"             #'hackernews-load-more-stories)
+    (define-key map "n"             #'hackernews-next-item)
+    (define-key map "p"             #'hackernews-previous-item)
+    (define-key map "\t"            #'hackernews-next-comment)
+    (define-key map [backtab]       #'hackernews-previous-comment)
+    (define-key map [S-iso-lefttab] #'hackernews-previous-comment)
+    (define-key map [S-tab]         #'hackernews-previous-comment)
+    map)
   "The keymap to use with hackernews.")
 
 (defun hackernews-internal-browser (url)
@@ -107,16 +118,6 @@ Try `eww' if available, otherwise `browse-url-text-browser'."
   (interactive)
   (forward-line -1)
   (hackernews-next-comment))
-
-(if hackernews-map
-    (progn
-      (define-key hackernews-map (kbd "g") 'hackernews)
-      (define-key hackernews-map (kbd "q") 'bury-buffer)
-      (define-key hackernews-map (kbd "m") 'hackernews-load-more-stories)
-      (define-key hackernews-map (kbd "n") 'hackernews-next-item)
-      (define-key hackernews-map (kbd "p") 'hackernews-previous-item)
-      (define-key hackernews-map (kbd "<tab>") 'hackernews-next-comment)
-      (define-key hackernews-map (kbd "<backtab>") 'hackernews-previous-comment)))
 
 ;;;###autoload
 (defun hackernews ()
@@ -162,11 +163,11 @@ Try `eww' if available, otherwise `browse-url-text-browser'."
                 (url url)
                 (face face)
                 (map (make-sparse-keymap)))
-    (define-key map (kbd "<RET>")
+    (define-key map "\r"
       (lambda () (interactive) (browse-url url)))
-    (define-key map (kbd "t")
+    (define-key map "t"
       (lambda () (interactive) (hackernews-internal-browser url)))
-    (define-key map (kbd "<down-mouse-1>")
+    (define-key map [down-mouse-1]
       (lambda () (interactive) (browse-url url)))
     (insert
      (propertize
