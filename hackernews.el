@@ -147,11 +147,10 @@ Try `eww' if available, otherwise `browse-url-text-browser'."
   (format "https://news.ycombinator.com/item?id=%s" id))
 
 (defun hackernews-link-of-url (url)
-  (lexical-let ((url url)
-		(hackernews-item "/comments/"))
-    (if (string-prefix-p hackernews-item url)
-	(hackernews-comment-url (substring url (length hackernews-item)))
-      url)))
+  (replace-regexp-in-string "\\`/comments/\\(.*\\)\\'"
+                            (lambda (match)
+                              (hackernews-comment-url (match-string 1 match)))
+                            url))
 
 (defun hackernews-create-link-in-buffer (title url face)
   "Insert clickable string into current buffer."
