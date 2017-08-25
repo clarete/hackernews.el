@@ -169,12 +169,6 @@ Try `eww' if available, otherwise `browse-url-text-browser'."
       'keymap map
       'mouse-face 'highlight))))
 
-(defun hackernews-space-fill (string n)
-  "Ensure STRING has length at least N by padding with trailing spaces."
-  (while (< (length string) n)
-    (setf string (concat string " ")))
-  (identity string))
-
 (defun hackernews-encoding (string)
   "Encode STRING for hackernews."
   (decode-coding-string
@@ -189,11 +183,8 @@ comments."
         (url (cdr (assoc 'url post)))
         (score (cdr (assoc 'score post)))
         (kids (cdr (assoc 'kids post))))
-    (insert (hackernews-space-fill
-             (propertize
-              (format "[%s]" score)
-              'face 'hackernews-score-face)
-             6))
+    (insert (format "%-6s" (propertize (format "[%s]" score)
+                                       'face 'hackernews-score-face)))
     (hackernews-create-link-in-buffer
      (hackernews-encoding title)
      (if url
