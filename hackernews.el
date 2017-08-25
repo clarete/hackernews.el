@@ -97,20 +97,19 @@ Try `eww' if available, otherwise `browse-url-text-browser'."
 (defun hackernews-next-item ()
   "Skip to next article link in hackernews buffer."
   (interactive)
-  (re-search-forward "^\[\[0-9]+\]\s*" nil t 1))
+  (re-search-forward "^\\[[[:digit:]]+][[:space:]]*" nil t))
 
 (defun hackernews-previous-item ()
   "Skip to previous article link in hackernews buffer."
   (interactive)
   (forward-line -1)
-  (beginning-of-line)
   (hackernews-next-item))
 
 (defun hackernews-next-comment ()
   "Skip to next article comments link in hackernews buffer."
   (interactive)
-  (re-search-forward " \([0-9]+ comments\)$" nil t 1)
-  (search-backward "("))
+  (when (re-search-forward " ([[:digit:]]+ comments)$" nil t)
+    (goto-char (1+ (match-beginning 0)))))
 
 (defun hackernews-previous-comment ()
   "Skip to previous article comments link in hackernews buffer."
@@ -138,10 +137,9 @@ Try `eww' if available, otherwise `browse-url-text-browser'."
                   hackernews-top-story-limit
                   (count-lines (point-min) (point-max)))))
     (hackernews-format-results
-     (mapcar 'hackernews-get-item stories)
+     (mapcar #'hackernews-get-item stories)
      t)
-    (forward-line (* (length stories) -1))
-    (beginning-of-line)
+    (forward-line (- (length stories)))
     (hackernews-next-item)))
 
 ;;; UI Functions
