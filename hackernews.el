@@ -154,9 +154,7 @@ Try `eww' if available, otherwise `browse-url-text-browser'."
 
 (defun hackernews-create-link-in-buffer (title url face)
   "Insert clickable string into current buffer."
-  (lexical-let ((title title)
-                (url url)
-                (face face)
+  (lexical-let ((url url)
                 (map (make-sparse-keymap)))
     (define-key map "\r"
       (lambda () (interactive) (browse-url url)))
