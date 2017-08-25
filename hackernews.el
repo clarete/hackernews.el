@@ -29,7 +29,6 @@
 
 (require 'json)
 (require 'url)
-(require 'eww nil :noerror)
 (eval-when-compile (require 'cl))
 
 (defgroup hackernews nil
@@ -83,7 +82,7 @@ This should not exceed 100.")
 (defun hackernews-internal-browser (url)
   "Open URL within Emacs.
 Try `eww' if available, otherwise `browse-url-text-browser'."
-  (if (featurep 'eww)
+  (if (fboundp 'eww-browse-url)
       (eww-browse-url url)
     (browse-url-text-emacs url)))
 
