@@ -221,12 +221,12 @@ buffer if available."
   "Get a list of stories.
 When specified, ignore all list entries after LIMIT and before
 OFFSET."
-  (if (null hackernews-top-story-list)
-      (setq hackernews-top-story-list
-            (append (hackernews-retrieve-and-parse hackernews-top-stories-url) nil)))
+  (unless hackernews-top-story-list
+    (setq hackernews-top-story-list
+          (append (hackernews-retrieve-and-parse hackernews-top-stories-url) ())))
   (let ((reverse-offset (- (length hackernews-top-story-list) (or offset 0))))
-    (if (<= reverse-offset 0)
-        (error "No more stories available"))
+    (when (<= reverse-offset 0)
+      (error "No more stories available"))
     (reverse (last (reverse (last hackernews-top-story-list reverse-offset)) limit))))
 
 (defun hackernews-get-item (id)
@@ -239,11 +239,11 @@ OFFSET."
   (let (json)
     (with-current-buffer (url-retrieve-synchronously url)
       (goto-char (point-min))
-      (when (not (string-match "200 OK" (buffer-string)))
+      (unless (string-match-p "200 OK" (buffer-string))
         (error "Problem connecting to the server"))
       (re-search-forward "^$" nil 'move)
       (setq json (buffer-substring-no-properties (point) (point-max)))
-      (kill-buffer (current-buffer)))
+      (kill-buffer))
     json))
 
 (defun hackernews-parse (contents)
