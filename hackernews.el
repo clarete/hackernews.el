@@ -208,12 +208,12 @@ buffer if available."
         (with-current-buffer buf
           (let ((inhibit-read-only t))
             (goto-char (point-max))
-            (mapcar 'hackernews-render-post results)))
+            (mapc #'hackernews-render-post results)))
       (with-output-to-temp-buffer buf-name
         (switch-to-buffer buf-name)
         (setq font-lock-mode nil)
         (use-local-map hackernews-map)
-        (mapcar 'hackernews-render-post results)))))
+        (mapc #'hackernews-render-post results)))))
 
 ;;; Retrieving and parsing
 
