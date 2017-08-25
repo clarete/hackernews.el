@@ -1,4 +1,4 @@
-;;; hackernews.el --- Hacker News Client for Emacs
+;;; hackernews.el --- Hacker News Client for Emacs -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2012  Lincoln de Sousa <lincoln@comum.org>
 
@@ -163,11 +163,11 @@ Try `eww' if available, otherwise `browse-url-text-browser'."
                 (face face)
                 (map (make-sparse-keymap)))
     (define-key map (kbd "<RET>")
-      #'(lambda (e) (interactive "p") (browse-url url)))
+      (lambda () (interactive) (browse-url url)))
     (define-key map (kbd "t")
-      #'(lambda (e) (interactive "p") (hackernews-internal-browser url)))
+      (lambda () (interactive) (hackernews-internal-browser url)))
     (define-key map (kbd "<down-mouse-1>")
-      #'(lambda (e) (interactive "p") (browse-url url)))
+      (lambda () (interactive) (browse-url url)))
     (insert
      (propertize
       title
