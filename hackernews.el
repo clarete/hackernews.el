@@ -38,17 +38,17 @@
   :prefix "hackernews-")
 
 (defface hackernews-link-face
-  '((t (:foreground "green")))
+  '((t :foreground "green"))
   "Face used for links to articles."
   :group 'hackernews)
 
 (defface hackernews-comment-count-face
-  '((t (:foreground "green")))
+  '((t :inherit hackernews-link-face))
   "Face used for comment counts."
   :group 'hackernews)
 
 (defface hackernews-score-face
-  '((t (:foreground nil)))
+  '((t :inherit default))
   "Face used for the score of an article."
   :group 'hackernews)
 
