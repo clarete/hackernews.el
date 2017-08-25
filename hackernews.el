@@ -121,13 +121,12 @@ Try `eww' if available, otherwise `browse-url-text-browser'."
 (defun hackernews ()
   "Read Hacker News."
   (interactive)
-  (setq hackernews-top-story-list nil)
-  (condition-case ex
+  (setq hackernews-top-story-list ())
+  (condition-case err
       (hackernews-format-results
-       (mapcar 'hackernews-get-item
+       (mapcar #'hackernews-get-item
                (hackernews-top-stories hackernews-top-story-limit)))
-    ('error
-     (message (format "hackernewsclient error: %s" (car (cdr ex))))))
+    (error (message "hackernews error: %s" (error-message-string err))))
   (hackernews-first-item))
 
 (defun hackernews-load-more-stories ()
