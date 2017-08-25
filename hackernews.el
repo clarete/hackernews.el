@@ -20,8 +20,8 @@
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ;;; Commentary:
-;;
-;; Read HackerNews from Emacs
+
+;; Read Hacker News from Emacs.
 ;;
 ;; Enjoy!
 
@@ -33,66 +33,77 @@
 (eval-when-compile (require 'cl))
 
 (defgroup hackernews nil
-  "Simple hackernews emacs client"
+  "Simple Hacker News Emacs client."
   :group 'external
   :prefix "hackernews-")
 
 (defface hackernews-link-face
   '((t (:foreground "green")))
-  "Face used for links to articles"
+  "Face used for links to articles."
   :group 'hackernews)
 
 (defface hackernews-comment-count-face
   '((t (:foreground "green")))
-  "Face used for comment counts"
+  "Face used for comment counts."
   :group 'hackernews)
 
 (defface hackernews-score-face
   '((t (:foreground nil)))
-  "Face used for the score of an article"
+  "Face used for the score of an article."
   :group 'hackernews)
 
-(defvar hackernews-top-story-list nil
-  "The list of stories to display")
+(defvar hackernews-top-story-list ()
+  "The list of stories to display.")
 
 (defvar hackernews-top-story-limit 20
-  "Retrieve details for at most this many stories. This should not exceed 100.")
+  "Retrieve details for at most this many stories.
+This should not exceed 100.")
 
-(defvar hackernews-top-stories-url "https://hacker-news.firebaseio.com/v0/topstories.json"
-  "The url to grab the top story ids")
+(defvar hackernews-top-stories-url
+  "https://hacker-news.firebaseio.com/v0/topstories.json"
+  "The URL from which to grab top story IDs.")
 
 (defvar hackernews-item-url "https://hacker-news.firebaseio.com/v0/item/%s.json"
-  "The url to grab an item's details")
+  "The URL format from which to grab an item's details.")
 
 (defvar hackernews-map (make-sparse-keymap)
-  "The keymap to use with hackernews")
+  "The keymap to use with hackernews.")
 
 (defun hackernews-internal-browser (url)
+  "Open URL within Emacs.
+Try `eww' if available, otherwise `browse-url-text-browser'."
   (if (featurep 'eww)
       (eww-browse-url url)
     (browse-url-text-emacs url)))
 
+;;; Interactive functions
+
 (defun hackernews-first-item ()
+  "Move point to first article link in hackernews buffer."
   (interactive)
   (goto-char (point-min))
   (hackernews-next-item))
 
 (defun hackernews-next-item ()
+  "Skip to next article link in hackernews buffer."
   (interactive)
   (re-search-forward "^\[\[0-9]+\]\s*" nil t 1))
 
 (defun hackernews-previous-item ()
+  "Skip to previous article link in hackernews buffer."
   (interactive)
   (forward-line -1)
   (beginning-of-line)
   (hackernews-next-item))
 
 (defun hackernews-next-comment ()
+  "Skip to next article comments link in hackernews buffer."
   (interactive)
   (re-search-forward " \([0-9]+ comments\)$" nil t 1)
   (search-backward "("))
 
 (defun hackernews-previous-comment ()
+  "Skip to previous article comments link in hackernews buffer."
   (interactive)
   (forward-line -1)
   (hackernews-next-comment))
@@ -107,11 +118,9 @@
       (define-key hackernews-map (kbd "<tab>") 'hackernews-next-comment)
       (define-key hackernews-map (kbd "<backtab>") 'hackernews-previous-comment)))
 
-;;; Interactive functions
-
 ;;;###autoload
 (defun hackernews ()
-  "The entry point of our client"
+  "Read Hacker News."
   (interactive)
   (setq hackernews-top-story-list nil)
   (condition-case ex
@@ -123,7 +132,7 @@
   (hackernews-first-item))
 
 (defun hackernews-load-more-stories ()
-  "Load more stories into the buffer"
+  "Load more stories into the hackernews buffer."
   (interactive)
   (let ((stories (hackernews-top-stories
                   hackernews-top-story-limit
@@ -148,7 +157,7 @@
       url)))
 
 (defun hackernews-create-link-in-buffer (title url face)
-  "Insert clickable string inside a buffer"
+  "Insert clickable string into current buffer."
   (lexical-let ((title title)
                 (url url)
                 (face face)
@@ -167,21 +176,20 @@
       'mouse-face 'highlight))))
 
 (defun hackernews-space-fill (string n)
-  "Makes sure that string is at least n characters long, and
-   if it isn't, it adds SPACE-characters to the end"
+  "Ensure STRING has length at least N by padding with trailing spaces."
   (while (< (length string) n)
     (setf string (concat string " ")))
   (identity string))
 
 (defun hackernews-encoding (string)
-  "encoding"
+  "Encode STRING for hackernews."
   (decode-coding-string
    (encode-coding-string string 'utf-8) 'utf-8))
 
 (defun hackernews-render-post (post)
-  "Render a single post to the current buffer
-  Add the post title as a link, and print the points and number of
-  comments."
+  "Render single hackernews POST in current buffer.
+Add POST title as a link and print its points and number of
+comments."
   (let ((id (cdr (assoc 'id post)))
         (title (cdr (assoc 'title post)))
         (url (cdr (assoc 'url post)))
@@ -205,9 +213,9 @@
     (insert "\n")))
 
 (defun hackernews-format-results (results &optional append)
-  "Create the buffer to render all the info.
-When APPEND is non-nil, the results are appended to the
-existing buffer if available."
+  "Create hackernews buffer to render RESULTS in.
+When APPEND is non-nil, the RESULTS are appended to the existing
+buffer if available."
   (let* ((buf-name "*hackernews*")
          (buf (get-buffer buf-name)))
     (if (and append buf)
@@ -225,8 +233,8 @@ existing buffer if available."
 
 (defun hackernews-top-stories (&optional limit offset)
   "Get a list of stories.
-When LIMIT is given, ignore all list entries past the limit.
-When OFFSET is given, ignore all list entries before the offset."
+When specified, ignore all list entries after LIMIT and before
+OFFSET."
   (if (null hackernews-top-story-list)
       (setq hackernews-top-story-list
             (append (hackernews-retrieve-and-parse hackernews-top-stories-url) nil)))
