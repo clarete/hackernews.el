@@ -191,11 +191,12 @@ comments."
          (hackernews-link-of-url (hackernews-encoding url))
        (hackernews-comment-url id))
      'hackernews-link-face)
+    (insert ?\s)
     (hackernews-create-link-in-buffer
-     (format " (%d comments)" (length kids))
+     (format "(%d comments)" (length kids))
      (hackernews-comment-url id)
      'hackernews-comment-count-face)
-    (insert "\n")))
+    (insert ?\n)))
 
 (defun hackernews-format-results (results &optional append)
   "Create hackernews buffer to render RESULTS in.
