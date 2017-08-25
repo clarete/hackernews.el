@@ -178,11 +178,11 @@ Try `eww' if available, otherwise `browse-url-text-browser'."
   "Render single hackernews POST in current buffer.
 Add POST title as a link and print its points and number of
 comments."
-  (let ((id (cdr (assoc 'id post)))
-        (title (cdr (assoc 'title post)))
-        (url (cdr (assoc 'url post)))
-        (score (cdr (assoc 'score post)))
-        (kids (cdr (assoc 'kids post))))
+  (let ((id    (cdr (assq 'id    post)))
+        (title (cdr (assq 'title post)))
+        (url   (cdr (assq 'url   post)))
+        (score (cdr (assq 'score post)))
+        (kids  (cdr (assq 'kids  post))))
     (insert (format "%-6s" (propertize (format "[%s]" score)
                                        'face 'hackernews-score-face)))
     (hackernews-create-link-in-buffer
