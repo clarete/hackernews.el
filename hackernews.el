@@ -29,7 +29,6 @@
 
 (require 'json)
 (require 'url)
-(eval-when-compile (require 'cl))
 
 (defgroup hackernews nil
   "Simple Hacker News Emacs client."
@@ -77,16 +76,26 @@ This should not exceed 100.")
     (define-key map [S-iso-lefttab] #'hackernews-previous-comment)
     (define-key map [S-tab]         #'hackernews-previous-comment)
     map)
-  "The keymap to use with hackernews.")
+  "Keymap used in hackernews buffer.")
 
-(defun hackernews-internal-browser (url)
-  "Open URL within Emacs.
-Try `eww' if available, otherwise `browse-url-text-browser'."
-  (if (fboundp 'eww-browse-url)
-      (eww-browse-url url)
-    (browse-url-text-emacs url)))
+(defvar hackernews-button-map
+  (let ((map (make-sparse-keymap)))
+    (set-keymap-parent map button-map)
+    (define-key map "t" #'hackernews-button-browse-internal)
+    map)
+  "Keymap used on hackernews links.")
 
-;;; Interactive functions
+(define-button-type 'hackernews-link
+  'action      #'hackernews-browse-url-action
+  'face        'hackernews-link-face
+  'follow-link t
+  'keymap      hackernews-button-map)
+
+(define-button-type 'hackernews-comment-count
+  'face      'hackernews-comment-count-face
+  'supertype 'hackernews-link)
+
+;;; Motion
 
 (defun hackernews-first-item ()
   "Move point to first article link in hackernews buffer."
@@ -94,28 +103,49 @@ Try `eww' if available, otherwise `browse-url-text-browser'."
   (goto-char (point-min))
   (hackernews-next-item))
 
-(defun hackernews-next-item ()
-  "Skip to next article link in hackernews buffer."
-  (interactive)
-  (re-search-forward "^\\[[[:digit:]]+][[:space:]]*" nil t))
+(defun hackernews--signum (x)
+  "Backport of `cl-signum'."
+  (cond ((> x 0)  1)
+        ((< x 0) -1)
+        (t        0)))
 
-(defun hackernews-previous-item ()
-  "Skip to previous article link in hackernews buffer."
-  (interactive)
-  (forward-line -1)
-  (hackernews-next-item))
+(defun hackernews--forward-button (n type)
+  "Move to Nth next button of TYPE (previous if N is negative)."
+  (let ((pos  (point))
+        (sign (hackernews--signum n)))
+    (while (let ((button (ignore-errors (forward-button sign))))
+             (when button
+               (when (eq (button-type button) type)
+                 (setq pos (button-start button))
+                 (setq n (- n sign)))
+               (/= n 0))))
+    (goto-char pos)))
 
-(defun hackernews-next-comment ()
-  "Skip to next article comments link in hackernews buffer."
-  (interactive)
-  (when (re-search-forward " ([[:digit:]]+ comments)$" nil t)
-    (goto-char (1+ (match-beginning 0)))))
+(defun hackernews-next-item (&optional n)
+  "Move to Nth next article link (previous if N is negative).
+N defaults to 1."
+  (interactive "p")
+  (hackernews--forward-button (or n 1) 'hackernews-link))
 
-(defun hackernews-previous-comment ()
-  "Skip to previous article comments link in hackernews buffer."
-  (interactive)
-  (forward-line -1)
-  (hackernews-next-comment))
+(defun hackernews-previous-item (&optional n)
+  "Move to Nth previous article link (next if N is negative).
+N defaults to 1."
+  (interactive "p")
+  (hackernews-next-item (- (or n 1))))
+
+(defun hackernews-next-comment (&optional n)
+  "Move to Nth next comments link (previous if N is negative).
+N defaults to 1."
+  (interactive "p")
+  (hackernews--forward-button (or n 1) 'hackernews-comment-count))
+
+(defun hackernews-previous-comment (&optional n)
+  "Move to Nth previous comments link (next if N is negative).
+N defaults to 1."
+  (interactive "p")
+  (hackernews-next-comment (- (or n 1))))
+
+;;; Browsing
 
 ;;;###autoload
 (defun hackernews ()
@@ -141,7 +171,20 @@ Try `eww' if available, otherwise `browse-url-text-browser'."
     (forward-line (- (length stories)))
     (hackernews-next-item)))
 
-;;; UI Functions
+(defun hackernews-browse-url-action (button)
+  "Pass URL of BUTTON to `browse-url'."
+  (browse-url (button-get button 'url)))
+
+(defun hackernews-button-browse-internal ()
+  "Open URL of button under point within Emacs.
+Try `eww' if available, otherwise `browse-url-text-browser'."
+  (interactive)
+  (funcall (if (fboundp 'eww-browse-url)
+               #'eww-browse-url
+             #'browse-url-text-emacs)
+           (button-get (button-at (point)) 'url)))
+
+;;; UI
 
 (defun hackernews-comment-url (id)
   (format "https://news.ycombinator.com/item?id=%s" id))
@@ -152,22 +195,12 @@ Try `eww' if available, otherwise `browse-url-text-browser'."
                               (hackernews-comment-url (match-string 1 match)))
                             url))
 
-(defun hackernews-create-link-in-buffer (title url face)
-  "Insert clickable string into current buffer."
-  (lexical-let ((url url)
-                (map (make-sparse-keymap)))
-    (define-key map "\r"
-      (lambda () (interactive) (browse-url url)))
-    (define-key map "t"
-      (lambda () (interactive) (hackernews-internal-browser url)))
-    (define-key map [down-mouse-1]
-      (lambda () (interactive) (browse-url url)))
-    (insert
-     (propertize
-      title
-      'face face
-      'keymap map
-      'mouse-face 'highlight))))
+(defun hackernews-insert-button (type label url)
+  "Insert button of TYPE pointing to URL with LABEL."
+  (insert-text-button label
+                      'help-echo url
+                      'type      type
+                      'url       url))
 
 (defun hackernews-encoding (string)
   "Encode STRING for hackernews."
@@ -185,17 +218,17 @@ comments."
         (kids  (cdr (assq 'kids  post))))
     (insert (format "%-6s" (propertize (format "[%s]" score)
                                        'face 'hackernews-score-face)))
-    (hackernews-create-link-in-buffer
+    (hackernews-insert-button
+     'hackernews-link
      (hackernews-encoding title)
      (if url
          (hackernews-link-of-url (hackernews-encoding url))
-       (hackernews-comment-url id))
-     'hackernews-link-face)
+       (hackernews-comment-url id)))
     (insert ?\s)
-    (hackernews-create-link-in-buffer
+    (hackernews-insert-button
+     'hackernews-comment-count
      (format "(%d comments)" (length kids))
-     (hackernews-comment-url id)
-     'hackernews-comment-count-face)
+     (hackernews-comment-url id))
     (insert ?\n)))
 
 (defun hackernews-format-results (results &optional append)
