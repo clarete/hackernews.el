@@ -230,12 +230,15 @@ OFFSET."
     (reverse (last (reverse (last hackernews-top-story-list reverse-offset)) limit))))
 
 (defun hackernews-get-item (id)
+  "Build URL for item based on its ID then retreave & parse it."
   (hackernews-retrieve-and-parse (format hackernews-item-url id)))
 
 (defun hackernews-retrieve-and-parse (url)
+  "Retrieve contents from URL and parse it."
   (hackernews-parse (hackernews-retrieve url)))
 
 (defun hackernews-retrieve (url)
+  "Download URL and remove HTTP envelope."
   (let (json)
     (with-current-buffer (url-retrieve-synchronously url)
       (goto-char (point-min))
@@ -247,6 +250,7 @@ OFFSET."
     json))
 
 (defun hackernews-parse (contents)
+  "Parse CONTENTS as JSON."
   (json-read-from-string contents))
 
 (provide 'hackernews)
