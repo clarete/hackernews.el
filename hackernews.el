@@ -115,6 +115,24 @@ When nil, point is placed on first new item retrieved."
   :group 'hackernews
   :type 'boolean)
 
+(defcustom hackernews-before-render-hook ()
+  "Hook called before rendering any new items."
+  :group 'hackernews
+  :type 'hook)
+
+(defcustom hackernews-after-render-hook ()
+  "Hook called after rendering any new items.
+The position of point will not have been affected by the render."
+  :group 'hackernews
+  :type 'hook)
+
+(defcustom hackernews-finalize-hook ()
+  "Hook called as final step of loading any new items.
+The position of point may have been adjusted after the render and
+buffer-local feed state will have been updated."
+  :group 'hackernews
+  :type 'hook)
+
 (defcustom hackernews-suppress-url-status t
   "Whether to suppress messages controlled by `url-show-status'.
 When nil, `url-show-status' determines whether certain status
@@ -407,9 +425,11 @@ hackernews buffer."
       (hackernews-mode))
 
     ;; Render items
+    (run-hooks 'hackernews-before-render-hook)
     (save-excursion
       (goto-char (point-max))
       (mapc #'hackernews-render-item items))
+    (run-hooks 'hackernews-after-render-hook)
 
     ;; Adjust point
     (unless (and append hackernews-preserve-point)
@@ -419,7 +439,9 @@ hackernews buffer."
     ;; Persist state
     (hackernews--put :feed   feed)
     (hackernews--put :ids    ids)
-    (hackernews--put :offset (+ offset count))))
+    (hackernews--put :offset (+ offset count))
+
+    (run-hooks 'hackernews-finalize-hook)))
 
 (defun hackernews--load-stories (feed n)
   "Refresh FEED list and render its top N items.
