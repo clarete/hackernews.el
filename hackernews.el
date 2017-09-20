@@ -136,7 +136,7 @@ See `hackernews-feed-names' for supported values of FEED."
 ;;; Motion
 
 (defun hackernews-first-item ()
-  "Move point to first article link in hackernews buffer."
+  "Move point to first story link in hackernews buffer."
   (interactive)
   (goto-char (point-min))
   (hackernews-next-item))
@@ -144,23 +144,27 @@ See `hackernews-feed-names' for supported values of FEED."
 (defun hackernews--forward-button (n type)
   "Move to Nth next button of TYPE (previous if N is negative)."
   (let ((pos  (point))
-        (sign (hackernews--signum n)))
+        (sign (hackernews--signum n))
+        msg)
     (while (let ((button (ignore-errors (forward-button sign))))
              (when button
                (when (eq (button-type button) type)
                  (setq pos (button-start button))
-                 (setq n (- n sign)))
+                 (setq msg (button-get button 'help-echo))
+                 (setq n   (- n sign)))
                (/= n 0))))
-    (goto-char pos)))
+    (goto-char pos)
+    (when msg (message "%s" msg))))
 
 (defun hackernews-next-item (&optional n)
-  "Move to Nth next article link (previous if N is negative).
+  "Move to Nth next story link (previous if N is negative).
 N defaults to 1."
   (interactive "p")
+  ;; N is kept optional for backward compatibility
   (hackernews--forward-button (or n 1) 'hackernews-link))
 
 (defun hackernews-previous-item (&optional n)
-  "Move to Nth previous article link (next if N is negative).
+  "Move to Nth previous story link (next if N is negative).
 N defaults to 1."
   (interactive "p")
   (hackernews-next-item (- (or n 1))))
