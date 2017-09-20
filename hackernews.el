@@ -160,8 +160,12 @@ not interrupted."
 :offset - Number of items currently displayed.")
 (make-variable-buffer-local 'hackernews--feed-state)
 
+(defvar hackernews-feed-history ()
+  "Completion history of hackernews feeds switched to.")
+
 (defvar hackernews-mode-map
   (let ((map (make-sparse-keymap)))
+    (define-key map "f"             #'hackernews-switch-feed)
     (define-key map "g"             #'hackernews-reload)
     (define-key map "m"             #'hackernews-load-more-stories)
     (define-key map "n"             #'hackernews-next-item)
@@ -226,6 +230,13 @@ See `hackernews-feed-names' for supported values of FEED."
 (defun hackernews--feed-name (feed)
   "Lookup FEED in `hackernews-feed-names'."
   (cdr (assoc-string feed hackernews-feed-names)))
+
+(defun hackernews--feed-annotation (feed)
+  "Annotate FEED during completion.
+This is intended as an :annotation-function in
+`completion-extra-properties'."
+  (let ((name (hackernews--feed-name feed)))
+    (and name (concat " - " name))))
 
 (defalias 'hackernews--signum
   (if (and (require 'cl-lib nil t)
@@ -317,6 +328,20 @@ N defaults to `hackernews-items-per-page'."
         (message "%s" (substitute-command-keys "\
 End of feed; type \\[hackernews-reload] to load new items."))
       (hackernews--retrieve-items feed n ids offset))))
+
+(defun hackernews-switch-feed (&optional n)
+  "Read top N Hacker News stories from a different feed.
+The Hacker News feed is determined by the user with completion
+and N defaults to `hackernews-items-per-page'."
+  (interactive "P")
+  (let ((completion-extra-properties
+         (list :annotation-function #'hackernews--feed-annotation)))
+    (hackernews--load-stories
+     (completing-read
+      (format "Hacker News feed (default %s): " hackernews-default-feed)
+      hackernews-feed-names nil t nil 'hackernews-feed-history
+      hackernews-default-feed)
+     n)))
 
 (defun hackernews-top-stories (&optional n)
   "Read top N Hacker News Top Stories.
