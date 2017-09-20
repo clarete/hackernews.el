@@ -98,6 +98,18 @@ This should not exceed 100.")
 (put 'hackernews-error 'error-conditions '(hackernews-error error))
 (put 'hackernews-error 'error-message    "Hackernews error")
 
+;;; Utils
+
+(defalias 'hackernews--signum
+  (if (and (require 'cl-lib nil t)
+           (fboundp 'cl-signum))
+      #'cl-signum
+    (lambda (x)
+      (cond ((> x 0)  1)
+            ((< x 0) -1)
+            (t        0))))
+  "Compatibility shim for `cl-signum'.")
+
 ;;; Motion
 
 (defun hackernews-first-item ()
@@ -105,12 +117,6 @@ This should not exceed 100.")
   (interactive)
   (goto-char (point-min))
   (hackernews-next-item))
-
-(defun hackernews--signum (x)
-  "Backport of `cl-signum'."
-  (cond ((> x 0)  1)
-        ((< x 0) -1)
-        (t        0)))
 
 (defun hackernews--forward-button (n type)
   "Move to Nth next button of TYPE (previous if N is negative)."
