@@ -36,6 +36,8 @@
   :group 'external
   :prefix "hackernews-")
 
+;;; Faces
+
 (defface hackernews-link-face
   '((t :inherit link :foreground "green" :underline nil))
   "Face used for links to stories."
@@ -50,6 +52,8 @@
   '((t :inherit default))
   "Face used for the score of a story."
   :group 'hackernews)
+
+;;; User options
 
 (defcustom hackernews-items-per-page 20
   "Default number of stories to retrieve in one go."
@@ -141,6 +145,8 @@ suppressed by default so that the hackernews progress reporter is
 not interrupted."
   :group 'hackernews
   :type 'boolean)
+
+;;; Internal definitions
 
 (defconst hackernews-api-version "v0"
   "Currently supported version of the Hacker News API.")
@@ -250,12 +256,6 @@ This is intended as an :annotation-function in
 
 ;;; Motion
 
-(defun hackernews-first-item ()
-  "Move point to first story link in hackernews buffer."
-  (interactive)
-  (goto-char (point-min))
-  (hackernews-next-item))
-
 (defun hackernews--forward-button (n type)
   "Move to Nth next button of TYPE (previous if N is negative)."
   (let ((pos  (point))
@@ -296,7 +296,146 @@ N defaults to 1."
   (interactive "p")
   (hackernews-next-comment (- (or n 1))))
 
-;;; Browsing
+(defun hackernews-first-item ()
+  "Move point to first story link in hackernews buffer."
+  (interactive)
+  (goto-char (point-min))
+  (hackernews-next-item))
+
+;;; UI
+
+(defun hackernews-browse-url-action (button)
+  "Pass URL of BUTTON to `browse-url'."
+  (browse-url (button-get button 'shr-url)))
+
+(defun hackernews-button-browse-internal ()
+  "Open URL of button under point within Emacs.
+Try `eww' if available, otherwise `browse-url-text-browser'."
+  (interactive)
+  (funcall (if (fboundp 'eww-browse-url)
+               #'eww-browse-url
+             #'browse-url-text-emacs)
+           (button-get (button-at (point)) 'shr-url)))
+
+(defun hackernews--button-string (type label url)
+  "Return button string of TYPE pointing to URL with LABEL."
+  ;; TODO: Maintain single internal buffer for this purpose?
+  (with-temp-buffer
+    (insert-text-button label 'type type 'help-echo url 'shr-url url)
+    (buffer-string)))
+
+(defun hackernews-render-item (item)
+  "Render Hacker News ITEM in current buffer.
+The user options `hackernews-score-format',
+`hackernews-title-format' and `hackernews-comments-format'
+control how each of the ITEM's score, title and comments count
+are formatted, respectively. These components are then combined
+according to `hackernews-item-format'. The title and comments
+counts are rendered as text buttons which are hyperlinked to
+their respective URLs."
+  (let* ((id           (cdr (assq 'id          item)))
+         (title        (cdr (assq 'title       item)))
+         (score        (cdr (assq 'score       item)))
+         (item-url     (cdr (assq 'url         item)))
+         (descendants  (cdr (assq 'descendants item)))
+         (comments-url (hackernews--comments-url id)))
+    (insert
+     (format-spec hackernews-item-format
+                  (format-spec-make
+                   ?s (propertize (format hackernews-score-format score)
+                                  'face 'hackernews-score-face)
+                   ?t (hackernews--button-string
+                       'hackernews-link title (or item-url comments-url))
+                   ?c (hackernews--button-string
+                       'hackernews-comment-count
+                       (format hackernews-comments-format (or descendants 0))
+                       comments-url))))))
+
+;; TODO: Derive from `tabulated-list-mode'?
+(define-derived-mode hackernews-mode special-mode "HN"
+  "Mode for browsing Hacker News.
+
+\\{hackernews-mode-map}"
+  :group 'hackernews
+  (setq hackernews--feed-state ())
+  (setq truncate-lines t)
+  (buffer-disable-undo))
+
+;;; Retrieval
+
+(defun hackernews-read-contents (url)
+  "Retrieve contents from URL and parse them as JSON.
+Objects are decoded as alists and arrays as vectors."
+  (with-temp-buffer
+    (let ((json-object-type 'alist)
+          (json-array-type  'vector)
+          (url-show-status  (unless hackernews-suppress-url-status
+                              url-show-status)))
+      (url-insert-file-contents url)
+      (json-read))))
+
+(defun hackernews--retrieve-items (feed n ids &optional append)
+  "Retrieve and render at most N new items from FEED.
+Create and setup corresponding hackernews buffer if necessary.
+
+IDS is the vector of item IDs corresponding to FEED.
+
+When APPEND is nil, the contents of the hackernews buffer are
+replaced with the N new items rendered. Otherwise, APPEND should
+be an offset into IDS indicating where the previous render left
+off. The N new items are then rendered at the end of the
+hackernews buffer."
+  ;; TODO: * Allow negative N?
+  ;;       * Make asynchronous?
+  (let* ((name   (hackernews--feed-name feed))
+         (offset (or append 0))
+         (count  (max 0 (min (- (length ids) offset)
+                             (if n
+                                 (prefix-numeric-value n)
+                               hackernews-items-per-page))))
+         (items  (make-vector count ()))
+         (inhibit-read-only t))
+
+    ;; Retrieve items
+    (dotimes-with-progress-reporter (i count)
+        (format "Retrieving %d %s..." count name)
+      (aset items i (hackernews-read-contents (hackernews--item-url
+                                               (aref ids (+ offset i))))))
+
+    ;; Setup buffer
+    (pop-to-buffer (format "*hackernews %s*" name))
+    (unless append
+      (erase-buffer)
+      (hackernews-mode))
+
+    ;; Render items
+    (run-hooks 'hackernews-before-render-hook)
+    (save-excursion
+      (goto-char (point-max))
+      (mapc #'hackernews-render-item items))
+    (run-hooks 'hackernews-after-render-hook)
+
+    ;; Adjust point
+    (unless (and append hackernews-preserve-point)
+      (goto-char (point-max))
+      (hackernews-previous-item count))
+
+    ;; Persist state
+    (hackernews--put :feed   feed)
+    (hackernews--put :ids    ids)
+    (hackernews--put :offset (+ offset count))
+
+    (run-hooks 'hackernews-finalize-hook)))
+
+(defun hackernews--load-stories (feed n)
+  "Refresh FEED list and render its top N items.
+Any previous hackernews buffer contents are overwritten."
+  ;; Display initial message before blocking to retrieve ID vector
+  (message "Retrieving %s..." (hackernews--feed-name feed))
+  (hackernews--retrieve-items
+   feed n (hackernews-read-contents (hackernews--feed-url feed))))
+
+;;; Feeds
 
 ;;;###autoload
 (defun hackernews (&optional n)
@@ -378,139 +517,6 @@ N defaults to `hackernews-items-per-page'."
 N defaults to `hackernews-items-per-page'."
   (interactive "P")
   (hackernews--load-stories "job" n))
-
-(defun hackernews-browse-url-action (button)
-  "Pass URL of BUTTON to `browse-url'."
-  (browse-url (button-get button 'shr-url)))
-
-(defun hackernews-button-browse-internal ()
-  "Open URL of button under point within Emacs.
-Try `eww' if available, otherwise `browse-url-text-browser'."
-  (interactive)
-  (funcall (if (fboundp 'eww-browse-url)
-               #'eww-browse-url
-             #'browse-url-text-emacs)
-           (button-get (button-at (point)) 'shr-url)))
-
-;;; UI
-
-(defun hackernews--button-string (type label url)
-  "Return button string of TYPE pointing to URL with LABEL."
-  ;; TODO: Maintain single internal buffer for this purpose?
-  (with-temp-buffer
-    (insert-text-button label 'type type 'help-echo url 'shr-url url)
-    (buffer-string)))
-
-(defun hackernews-render-item (item)
-  "Render Hacker News ITEM in current buffer.
-The user options `hackernews-score-format',
-`hackernews-title-format' and `hackernews-comments-format'
-control how each of the ITEM's score, title and comments count
-are formatted, respectively. These components are then combined
-according to `hackernews-item-format'. The title and comments
-counts are rendered as text buttons which are hyperlinked to
-their respective URLs."
-  (let* ((id           (cdr (assq 'id          item)))
-         (title        (cdr (assq 'title       item)))
-         (score        (cdr (assq 'score       item)))
-         (item-url     (cdr (assq 'url         item)))
-         (descendants  (cdr (assq 'descendants item)))
-         (comments-url (hackernews--comments-url id)))
-    (insert
-     (format-spec hackernews-item-format
-                  (format-spec-make
-                   ?s (propertize (format hackernews-score-format score)
-                                  'face 'hackernews-score-face)
-                   ?t (hackernews--button-string
-                       'hackernews-link title (or item-url comments-url))
-                   ?c (hackernews--button-string
-                       'hackernews-comment-count
-                       (format hackernews-comments-format (or descendants 0))
-                       comments-url))))))
-
-;; TODO: Derive from `tabulated-list-mode'?
-(define-derived-mode hackernews-mode special-mode "HN"
-  "Mode for browsing Hacker News.
-
-\\{hackernews-mode-map}"
-  :group 'hackernews
-  (setq hackernews--feed-state ())
-  (setq truncate-lines t)
-  (buffer-disable-undo))
-
-;;; Retrieving and parsing
-
-(defun hackernews-read-contents (url)
-  "Retrieve contents from URL and parse them as JSON.
-Objects are decoded as alists and arrays as vectors."
-  (with-temp-buffer
-    (let ((json-object-type 'alist)
-          (json-array-type  'vector)
-          (url-show-status  (unless hackernews-suppress-url-status
-                              url-show-status)))
-      (url-insert-file-contents url)
-      (json-read))))
-
-(defun hackernews--retrieve-items (feed n ids &optional append)
-  "Retrieve and render at most N new items from FEED.
-Create and setup corresponding hackernews buffer if necessary.
-
-IDS is the vector of item IDs corresponding to FEED.
-
-When APPEND is nil, the contents of the hackernews buffer are
-replaced with the N new items rendered. Otherwise, APPEND should
-be an offset into IDS indicating where the previous render left
-off. The N new items are then rendered at the end of the
-hackernews buffer."
-  ;; TODO: * Allow negative N?
-  ;;       * Make asynchronous?
-  (let* ((name   (hackernews--feed-name feed))
-         (offset (or append 0))
-         (count  (max 0 (min (- (length ids) offset)
-                             (if n
-                                 (prefix-numeric-value n)
-                               hackernews-items-per-page))))
-         (items  (make-vector count ()))
-         (inhibit-read-only t))
-
-    ;; Retrieve items
-    (dotimes-with-progress-reporter (i count)
-        (format "Retrieving %d %s..." count name)
-      (aset items i (hackernews-read-contents (hackernews--item-url
-                                               (aref ids (+ offset i))))))
-
-    ;; Setup buffer
-    (pop-to-buffer (format "*hackernews %s*" name))
-    (unless append
-      (erase-buffer)
-      (hackernews-mode))
-
-    ;; Render items
-    (run-hooks 'hackernews-before-render-hook)
-    (save-excursion
-      (goto-char (point-max))
-      (mapc #'hackernews-render-item items))
-    (run-hooks 'hackernews-after-render-hook)
-
-    ;; Adjust point
-    (unless (and append hackernews-preserve-point)
-      (goto-char (point-max))
-      (hackernews-previous-item count))
-
-    ;; Persist state
-    (hackernews--put :feed   feed)
-    (hackernews--put :ids    ids)
-    (hackernews--put :offset (+ offset count))
-
-    (run-hooks 'hackernews-finalize-hook)))
-
-(defun hackernews--load-stories (feed n)
-  "Refresh FEED list and render its top N items.
-Any previous hackernews buffer contents are overwritten."
-  ;; Display initial message before blocking to retrieve ID vector
-  (message "Retrieving %s..." (hackernews--feed-name feed))
-  (hackernews--retrieve-items
-   feed n (hackernews-read-contents (hackernews--feed-url feed))))
 
 (provide 'hackernews)
 
