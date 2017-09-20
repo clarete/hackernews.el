@@ -109,6 +109,12 @@ count to `format'."
   :group 'hackernews
   :type 'string)
 
+(defcustom hackernews-preserve-point t
+  "Whether to preserve point when loading more stories.
+When nil, point is placed on first new item retrieved."
+  :group 'hackernews
+  :type 'boolean)
+
 (defcustom hackernews-suppress-url-status t
   "Whether to suppress messages controlled by `url-show-status'.
 When nil, `url-show-status' determines whether certain status
@@ -406,8 +412,9 @@ hackernews buffer."
       (mapc #'hackernews-render-item items))
 
     ;; Adjust point
-    (unless append
-      (hackernews-first-item))
+    (unless (and append hackernews-preserve-point)
+      (goto-char (point-max))
+      (hackernews-previous-item count))
 
     ;; Persist state
     (hackernews--put :feed   feed)
