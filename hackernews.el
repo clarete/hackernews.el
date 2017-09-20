@@ -28,6 +28,7 @@
 ;;; Code:
 
 (require 'json)
+(require 'url)
 
 (defgroup hackernews nil
   "Simple Hacker News client."
@@ -106,6 +107,15 @@ The result is obtained by passing this string and the comments
 count to `format'."
   :group 'hackernews
   :type 'string)
+
+(defcustom hackernews-suppress-url-status t
+  "Whether to suppress messages controlled by `url-show-status'.
+When nil, `url-show-status' determines whether certain status
+messages are displayed when retrieving online data. This is
+suppressed by default so that the hackernews progress reporter is
+not interrupted."
+  :group 'hackernews
+  :type 'boolean)
 
 (defconst hackernews-api-version "v0"
   "Currently supported version of the Hacker News API.")
@@ -342,7 +352,9 @@ hyperlinked to their respective URLs."
 Objects are decoded as alists and arrays as vectors."
   (with-temp-buffer
     (let ((json-object-type 'alist)
-          (json-array-type  'vector))
+          (json-array-type  'vector)
+          (url-show-status  (unless hackernews-suppress-url-status
+                              url-show-status)))
       (url-insert-file-contents url)
       (json-read))))
 
