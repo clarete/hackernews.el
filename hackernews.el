@@ -27,6 +27,7 @@
 
 ;;; Code:
 
+(require 'format-spec)
 (require 'json)
 (require 'url)
 
@@ -308,32 +309,39 @@ Try `eww' if available, otherwise `browse-url-text-browser'."
 
 ;;; UI
 
-(defun hackernews-insert-button (type label url)
-  "Insert button of TYPE pointing to URL with LABEL."
-  (insert-text-button label
-                      'help-echo url
-                      'shr-url   url
-                      'type      type))
+(defun hackernews--button-string (type label url)
+  "Return button string of TYPE pointing to URL with LABEL."
+  ;; TODO: Maintain single internal buffer for this purpose?
+  (with-temp-buffer
+    (insert-text-button label 'type type 'help-echo url 'shr-url url)
+    (buffer-string)))
 
 (defun hackernews-render-item (item)
   "Render Hacker News ITEM in current buffer.
-On a single line, insert the score, title and comments count of
-ITEM. The latter two are rendered as text buttons which are
-hyperlinked to their respective URLs."
+The user options `hackernews-score-format',
+`hackernews-title-format' and `hackernews-comments-format'
+control how each of the ITEM's score, title and comments count
+are formatted, respectively. These components are then combined
+according to `hackernews-item-format'. The title and comments
+counts are rendered as text buttons which are hyperlinked to
+their respective URLs."
   (let* ((id           (cdr (assq 'id          item)))
          (title        (cdr (assq 'title       item)))
          (score        (cdr (assq 'score       item)))
          (item-url     (cdr (assq 'url         item)))
          (descendants  (cdr (assq 'descendants item)))
          (comments-url (hackernews--comments-url id)))
-    (insert (format "%-6s" (propertize (format "[%s]" score)
-                                       'face 'hackernews-score-face)))
-    (hackernews-insert-button 'hackernews-link title (or item-url comments-url))
-    (insert ?\s)
-    (hackernews-insert-button 'hackernews-comment-count
-                              (format "(%d comments)" (or descendants 0))
-                              comments-url)
-    (insert ?\n)))
+    (insert
+     (format-spec hackernews-item-format
+                  (format-spec-make
+                   ?s (propertize (format hackernews-score-format score)
+                                  'face 'hackernews-score-face)
+                   ?t (hackernews--button-string
+                       'hackernews-link title (or item-url comments-url))
+                   ?c (hackernews--button-string
+                       'hackernews-comment-count
+                       (format hackernews-comments-format (or descendants 0))
+                       comments-url))))))
 
 ;; TODO: Derive from `tabulated-list-mode'?
 (define-derived-mode hackernews-mode special-mode "HN"
