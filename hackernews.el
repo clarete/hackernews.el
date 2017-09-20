@@ -203,7 +203,7 @@ N defaults to 1."
 
 (defun hackernews-browse-url-action (button)
   "Pass URL of BUTTON to `browse-url'."
-  (browse-url (button-get button 'url)))
+  (browse-url (button-get button 'shr-url)))
 
 (defun hackernews-button-browse-internal ()
   "Open URL of button under point within Emacs.
@@ -212,7 +212,7 @@ Try `eww' if available, otherwise `browse-url-text-browser'."
   (funcall (if (fboundp 'eww-browse-url)
                #'eww-browse-url
              #'browse-url-text-emacs)
-           (button-get (button-at (point)) 'url)))
+           (button-get (button-at (point)) 'shr-url)))
 
 ;;; UI
 
@@ -220,8 +220,8 @@ Try `eww' if available, otherwise `browse-url-text-browser'."
   "Insert button of TYPE pointing to URL with LABEL."
   (insert-text-button label
                       'help-echo url
-                      'type      type
-                      'url       url))
+                      'shr-url   url
+                      'type      type))
 
 (defun hackernews-render-item (item)
   "Render Hacker News ITEM in current buffer.
