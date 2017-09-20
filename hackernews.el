@@ -318,6 +318,42 @@ N defaults to `hackernews-items-per-page'."
 End of feed; type \\[hackernews-reload] to load new items."))
       (hackernews--retrieve-items feed n ids offset))))
 
+(defun hackernews-top-stories (&optional n)
+  "Read top N Hacker News Top Stories.
+N defaults to `hackernews-items-per-page'."
+  (interactive "P")
+  (hackernews--load-stories "top" n))
+
+(defun hackernews-new-stories (&optional n)
+  "Read top N Hacker News New Stories.
+N defaults to `hackernews-items-per-page'."
+  (interactive "P")
+  (hackernews--load-stories "new" n))
+
+(defun hackernews-best-stories (&optional n)
+  "Read top N Hacker News Best Stories.
+N defaults to `hackernews-items-per-page'."
+  (interactive "P")
+  (hackernews--load-stories "best" n))
+
+(defun hackernews-ask-stories (&optional n)
+  "Read top N Hacker News Ask Stories.
+N defaults to `hackernews-items-per-page'."
+  (interactive "P")
+  (hackernews--load-stories "ask" n))
+
+(defun hackernews-show-stories (&optional n)
+  "Read top N Hacker News Show Stories.
+N defaults to `hackernews-items-per-page'."
+  (interactive "P")
+  (hackernews--load-stories "show" n))
+
+(defun hackernews-job-stories (&optional n)
+  "Read top N Hacker News Job Stories.
+N defaults to `hackernews-items-per-page'."
+  (interactive "P")
+  (hackernews--load-stories "job" n))
+
 (defun hackernews-browse-url-action (button)
   "Pass URL of BUTTON to `browse-url'."
   (browse-url (button-get button 'shr-url)))
