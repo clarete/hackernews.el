@@ -63,6 +63,9 @@ This should not exceed 100.")
 (defvar hackernews-item-url "https://hacker-news.firebaseio.com/v0/item/%s.json"
   "The URL format from which to grab an item's details.")
 
+(defconst hackernews-site-item-format "https://news.ycombinator.com/item?id=%s"
+  "Format of Hacker News website item URLs.")
+
 (defvar hackernews-map
   (let ((map (make-sparse-keymap)))
     (define-key map "g"             #'hackernews)
@@ -99,6 +102,10 @@ This should not exceed 100.")
 (put 'hackernews-error 'error-message    "Hackernews error")
 
 ;;; Utils
+
+(defun hackernews--comments-url (id)
+  "Return Hacker News website URL for item with ID."
+  (format hackernews-site-item-format id))
 
 (defalias 'hackernews--signum
   (if (and (require 'cl-lib nil t)
@@ -193,15 +200,6 @@ Try `eww' if available, otherwise `browse-url-text-browser'."
 
 ;;; UI
 
-(defun hackernews-comment-url (id)
-  (format "https://news.ycombinator.com/item?id=%s" id))
-
-(defun hackernews-link-of-url (url)
-  (replace-regexp-in-string "\\`/comments/\\(.*\\)\\'"
-                            (lambda (match)
-                              (hackernews-comment-url (match-string 1 match)))
-                            url))
-
 (defun hackernews-insert-button (type label url)
   "Insert button of TYPE pointing to URL with LABEL."
   (insert-text-button label
@@ -209,28 +207,24 @@ Try `eww' if available, otherwise `browse-url-text-browser'."
                       'type      type
                       'url       url))
 
-(defun hackernews-render-post (post)
-  "Render single hackernews POST in current buffer.
-Add POST title as a link and print its points and number of
-comments."
-  (let ((id    (cdr (assq 'id    post)))
-        (title (cdr (assq 'title post)))
-        (url   (cdr (assq 'url   post)))
-        (score (cdr (assq 'score post)))
-        (kids  (cdr (assq 'kids  post))))
+(defun hackernews-render-item (item)
+  "Render Hacker News ITEM in current buffer.
+On a single line, insert the score, title and comments count of
+ITEM. The latter two are rendered as text buttons which are
+hyperlinked to their respective URLs."
+  (let* ((id           (cdr (assq 'id          item)))
+         (title        (cdr (assq 'title       item)))
+         (score        (cdr (assq 'score       item)))
+         (item-url     (cdr (assq 'url         item)))
+         (descendants  (cdr (assq 'descendants item)))
+         (comments-url (hackernews--comments-url id)))
     (insert (format "%-6s" (propertize (format "[%s]" score)
                                        'face 'hackernews-score-face)))
-    (hackernews-insert-button
-     'hackernews-link
-     title
-     (if url
-         (hackernews-link-of-url url)
-       (hackernews-comment-url id)))
+    (hackernews-insert-button 'hackernews-link title (or item-url comments-url))
     (insert ?\s)
-    (hackernews-insert-button
-     'hackernews-comment-count
-     (format "(%d comments)" (length kids))
-     (hackernews-comment-url id))
+    (hackernews-insert-button 'hackernews-comment-count
+                              (format "(%d comments)" (or descendants 0))
+                              comments-url)
     (insert ?\n)))
 
 (defun hackernews-format-results (results &optional append)
