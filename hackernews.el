@@ -56,12 +56,13 @@
   "Retrieve details for at most this many stories.
 This should not exceed 100.")
 
-(defvar hackernews-top-stories-url
-  "https://hacker-news.firebaseio.com/v0/topstories.json"
-  "The URL from which to grab top story IDs.")
+(defconst hackernews-api-version "v0"
+  "Currently supported version of the Hacker News API.")
 
-(defvar hackernews-item-url "https://hacker-news.firebaseio.com/v0/item/%s.json"
-  "The URL format from which to grab an item's details.")
+(defconst hackernews-api-format
+  (format "https://hacker-news.firebaseio.com/%s/%%s.json"
+          hackernews-api-version)
+  "Format of targeted Hacker News API URLs.")
 
 (defconst hackernews-site-item-format "https://news.ycombinator.com/item?id=%s"
   "Format of Hacker News website item URLs.")
@@ -106,6 +107,21 @@ This should not exceed 100.")
 (defun hackernews--comments-url (id)
   "Return Hacker News website URL for item with ID."
   (format hackernews-site-item-format id))
+
+(defun hackernews--format-api-url (fmt &rest args)
+  "Construct a Hacker News API URL.
+The result of passing FMT and ARGS to `format' is substituted in
+`hackernews-api-format'."
+  (format hackernews-api-format (apply #'format fmt args)))
+
+(defun hackernews--item-url (id)
+  "Return Hacker News API URL for item with ID."
+  (hackernews--format-api-url "item/%s" id))
+
+(defun hackernews--feed-url (feed)
+  "Return Hacker News API URL for FEED.
+See `hackernews-feed-names' for supported values of FEED."
+  (hackernews--format-api-url "%sstories" feed))
 
 (defalias 'hackernews--signum
   (if (and (require 'cl-lib nil t)
@@ -252,7 +268,7 @@ When specified, ignore all list entries after LIMIT and before
 OFFSET."
   (unless hackernews-top-story-list
     (setq hackernews-top-story-list
-          (append (hackernews-read-contents hackernews-top-stories-url) ())))
+          (append (hackernews-read-contents (hackernews--feed-url 'top)) ())))
   (let ((reverse-offset (- (length hackernews-top-story-list) (or offset 0))))
     (when (<= reverse-offset 0)
       (signal 'hackernews-error '("No more stories available")))
@@ -261,7 +277,7 @@ OFFSET."
 
 (defun hackernews-get-item (id)
   "Build URL for item based on its ID then retreave & parse it."
-  (hackernews-read-contents (format hackernews-item-url id)))
+  (hackernews-read-contents (hackernews--item-url id)))
 
 (defun hackernews-read-contents (url)
   "Retrieve contents from URL and parse them as JSON.
