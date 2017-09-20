@@ -28,7 +28,6 @@
 ;;; Code:
 
 (require 'json)
-(require 'url)
 
 (defgroup hackernews nil
   "Simple Hacker News Emacs client."
@@ -202,11 +201,6 @@ Try `eww' if available, otherwise `browse-url-text-browser'."
                       'type      type
                       'url       url))
 
-(defun hackernews-encoding (string)
-  "Encode STRING for hackernews."
-  (decode-coding-string
-   (encode-coding-string string 'utf-8) 'utf-8))
-
 (defun hackernews-render-post (post)
   "Render single hackernews POST in current buffer.
 Add POST title as a link and print its points and number of
@@ -220,9 +214,9 @@ comments."
                                        'face 'hackernews-score-face)))
     (hackernews-insert-button
      'hackernews-link
-     (hackernews-encoding title)
+     title
      (if url
-         (hackernews-link-of-url (hackernews-encoding url))
+         (hackernews-link-of-url url)
        (hackernews-comment-url id)))
     (insert ?\s)
     (hackernews-insert-button
@@ -256,35 +250,25 @@ When specified, ignore all list entries after LIMIT and before
 OFFSET."
   (unless hackernews-top-story-list
     (setq hackernews-top-story-list
-          (append (hackernews-retrieve-and-parse hackernews-top-stories-url) ())))
+          (append (hackernews-read-contents hackernews-top-stories-url) ())))
   (let ((reverse-offset (- (length hackernews-top-story-list) (or offset 0))))
     (when (<= reverse-offset 0)
       (error "No more stories available"))
-    (reverse (last (reverse (last hackernews-top-story-list reverse-offset)) limit))))
+    (reverse (last (reverse (last hackernews-top-story-list reverse-offset))
+                   limit))))
 
 (defun hackernews-get-item (id)
   "Build URL for item based on its ID then retreave & parse it."
-  (hackernews-retrieve-and-parse (format hackernews-item-url id)))
+  (hackernews-read-contents (format hackernews-item-url id)))
 
-(defun hackernews-retrieve-and-parse (url)
-  "Retrieve contents from URL and parse it."
-  (hackernews-parse (hackernews-retrieve url)))
-
-(defun hackernews-retrieve (url)
-  "Download URL and remove HTTP envelope."
-  (let (json)
-    (with-current-buffer (url-retrieve-synchronously url)
-      (goto-char (point-min))
-      (unless (string-match-p "200 OK" (buffer-string))
-        (error "Problem connecting to the server"))
-      (re-search-forward "^$" nil 'move)
-      (setq json (buffer-substring-no-properties (point) (point-max)))
-      (kill-buffer))
-    json))
-
-(defun hackernews-parse (contents)
-  "Parse CONTENTS as JSON."
-  (json-read-from-string contents))
+(defun hackernews-read-contents (url)
+  "Retrieve contents from URL and parse them as JSON.
+Objects are decoded as alists and arrays as vectors."
+  (with-temp-buffer
+    (let ((json-object-type 'alist)
+          (json-array-type  'vector))
+      (url-insert-file-contents url)
+      (json-read))))
 
 (provide 'hackernews)
 
