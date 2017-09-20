@@ -94,6 +94,10 @@ This should not exceed 100.")
   'face      'hackernews-comment-count-face
   'supertype 'hackernews-link)
 
+;; Emulate `define-error'
+(put 'hackernews-error 'error-conditions '(hackernews-error error))
+(put 'hackernews-error 'error-message    "Hackernews error")
+
 ;;; Motion
 
 (defun hackernews-first-item ()
@@ -151,11 +155,9 @@ N defaults to 1."
   "Read Hacker News."
   (interactive)
   (setq hackernews-top-story-list ())
-  (condition-case err
-      (hackernews-format-results
-       (mapcar #'hackernews-get-item
-               (hackernews-top-stories hackernews-top-story-limit)))
-    (error (message "hackernews error: %s" (error-message-string err))))
+  (hackernews-format-results
+   (mapcar #'hackernews-get-item
+           (hackernews-top-stories hackernews-top-story-limit)))
   (hackernews-first-item))
 
 (defun hackernews-load-more-stories ()
@@ -253,7 +255,7 @@ OFFSET."
           (append (hackernews-read-contents hackernews-top-stories-url) ())))
   (let ((reverse-offset (- (length hackernews-top-story-list) (or offset 0))))
     (when (<= reverse-offset 0)
-      (error "No more stories available"))
+      (signal 'hackernews-error '("No more stories available")))
     (reverse (last (reverse (last hackernews-top-story-list reverse-offset))
                    limit))))
 
