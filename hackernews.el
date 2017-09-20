@@ -30,7 +30,7 @@
 (require 'json)
 
 (defgroup hackernews nil
-  "Simple Hacker News Emacs client."
+  "Simple Hacker News client."
   :group 'external
   :prefix "hackernews-")
 
@@ -49,12 +49,63 @@
   "Face used for the score of a story."
   :group 'hackernews)
 
-(defvar hackernews-top-story-list ()
-  "The list of stories to display.")
+(defcustom hackernews-items-per-page 20
+  "Default number of stories to retrieve in one go."
+  :group 'hackernews
+  :type 'integer)
 
-(defvar hackernews-top-story-limit 20
-  "Retrieve details for at most this many stories.
-This should not exceed 100.")
+(defvar hackernews-feed-names
+  '(("top"  . "top stories")
+    ("new"  . "new stories")
+    ("best" . "best stories")
+    ("ask"  . "ask stories")
+    ("show" . "show stories")
+    ("job"  . "job stories"))
+  ;; TODO: Should the keys all be symbols?
+  "Map feed types as strings to their display names.")
+(put 'hackernews-feed-names 'risky-local-variable t)
+
+(defcustom hackernews-default-feed "top"
+  "Default story feed to load.
+See `hackernews-feed-names' for supported feed types."
+  :group 'hackernews
+  :type `(radio ,@(mapcar (lambda (feed)
+                            `(const :tag ,(cdr feed) ,(car feed)))
+                          hackernews-feed-names)))
+
+;; TODO: Allow the following `*-format' options to take on function values?
+
+(defcustom hackernews-item-format "%-7s%t %c\n"
+  "Format specification for items in hackernews buffers.
+The result is obtained by passing this string and the following
+arguments to `format-spec':
+
+%s - Item score;    see `hackernews-score-format'.
+%t - Item title;    see `hackernews-title-format'.
+%c - Item comments; see `hackernews-comments-format'."
+  :group 'hackernews
+  :type 'string)
+
+(defcustom hackernews-score-format "[%s]"
+  "Format specification for displaying the score of an item.
+The result is obtained by passing this string and the score count
+to `format'."
+  :group 'hackernews
+  :type 'string)
+
+(defcustom hackernews-title-format "%s"
+  "Format specification for displaying the title of an item.
+The result is obtained by passing this string and the title to
+`format'."
+  :group 'hackernews
+  :type 'string)
+
+(defcustom hackernews-comments-format "(%s comments)"
+  "Format specification for displaying the comments of an item.
+The result is obtained by passing this string and the comments
+count to `format'."
+  :group 'hackernews
+  :type 'string)
 
 (defconst hackernews-api-version "v0"
   "Currently supported version of the Hacker News API.")
@@ -67,10 +118,16 @@ This should not exceed 100.")
 (defconst hackernews-site-item-format "https://news.ycombinator.com/item?id=%s"
   "Format of Hacker News website item URLs.")
 
-(defvar hackernews-map
+(defvar hackernews--feed-state ()
+  "Plist capturing state of current buffer's Hacker News feed.
+:feed   - Type of endpoint feed; see `hackernews-feed-names'.
+:ids    - Vector of item IDs last read from this feed.
+:offset - Number of items currently displayed.")
+(make-variable-buffer-local 'hackernews--feed-state)
+
+(defvar hackernews-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map "g"             #'hackernews)
-    (define-key map "q"             #'quit-window)
+    (define-key map "g"             #'hackernews-reload)
     (define-key map "m"             #'hackernews-load-more-stories)
     (define-key map "n"             #'hackernews-next-item)
     (define-key map "p"             #'hackernews-previous-item)
@@ -104,6 +161,14 @@ This should not exceed 100.")
 
 ;;; Utils
 
+(defun hackernews--get (prop)
+  "Extract value of PROP from `hackernews--feed-state'."
+  (plist-get hackernews--feed-state prop))
+
+(defun hackernews--put (prop val)
+  "Change value in `hackernews--feed-state' of PROP to VAL."
+  (setq hackernews--feed-state (plist-put hackernews--feed-state prop val)))
+
 (defun hackernews--comments-url (id)
   "Return Hacker News website URL for item with ID."
   (format hackernews-site-item-format id))
@@ -122,6 +187,10 @@ The result of passing FMT and ARGS to `format' is substituted in
   "Return Hacker News API URL for FEED.
 See `hackernews-feed-names' for supported values of FEED."
   (hackernews--format-api-url "%sstories" feed))
+
+(defun hackernews--feed-name (feed)
+  "Lookup FEED in `hackernews-feed-names'."
+  (cdr (assoc-string feed hackernews-feed-names)))
 
 (defalias 'hackernews--signum
   (if (and (require 'cl-lib nil t)
@@ -184,26 +253,35 @@ N defaults to 1."
 ;;; Browsing
 
 ;;;###autoload
-(defun hackernews ()
-  "Read Hacker News."
-  (interactive)
-  (setq hackernews-top-story-list ())
-  (hackernews-format-results
-   (mapcar #'hackernews-get-item
-           (hackernews-top-stories hackernews-top-story-limit)))
-  (hackernews-first-item))
+(defun hackernews (&optional n)
+  "Read top N Hacker News stories.
+The Hacker News feed is determined by `hackernews-default-feed'
+and N defaults to `hackernews-items-per-page'."
+  (interactive "P")
+  (hackernews--load-stories hackernews-default-feed n))
 
-(defun hackernews-load-more-stories ()
-  "Load more stories into the hackernews buffer."
-  (interactive)
-  (let ((stories (hackernews-top-stories
-                  hackernews-top-story-limit
-                  (count-lines (point-min) (point-max)))))
-    (hackernews-format-results
-     (mapcar #'hackernews-get-item stories)
-     t)
-    (forward-line (- (length stories)))
-    (hackernews-next-item)))
+(defun hackernews-reload (&optional n)
+  "Reload top N Hacker News stories from current feed.
+N defaults to `hackernews-items-per-page'."
+  (interactive "P")
+  (let ((feed (hackernews--get :feed)))
+    (if feed
+        (hackernews--load-stories feed n)
+      (signal 'hackernews-error '("Buffer unassociated with feed")))))
+
+(defun hackernews-load-more-stories (&optional n)
+  "Load N more stories into hackernews buffer.
+N defaults to `hackernews-items-per-page'."
+  (interactive "P")
+  (let ((feed   (hackernews--get :feed))
+        (ids    (hackernews--get :ids))
+        (offset (hackernews--get :offset)))
+    (unless (and feed ids offset)
+      (signal 'hackernews-error '("Buffer in invalid state")))
+    (if (>= offset (length ids))
+        (message "%s" (substitute-command-keys "\
+End of feed; type \\[hackernews-reload] to load new items."))
+      (hackernews--retrieve-items feed n ids offset))))
 
 (defun hackernews-browse-url-action (button)
   "Pass URL of BUTTON to `browse-url'."
@@ -247,41 +325,17 @@ hyperlinked to their respective URLs."
                               comments-url)
     (insert ?\n)))
 
-(defun hackernews-format-results (results &optional append)
-  "Create hackernews buffer to render RESULTS in.
-When APPEND is non-nil, the RESULTS are appended to the existing
-buffer if available."
-  (let* ((buf-name "*hackernews*")
-         (buf (get-buffer buf-name)))
-    (if (and append buf)
-        (with-current-buffer buf
-          (let ((inhibit-read-only t))
-            (goto-char (point-max))
-            (mapc #'hackernews-render-post results)))
-      (with-output-to-temp-buffer buf-name
-        (switch-to-buffer buf-name)
-        (setq font-lock-mode nil)
-        (use-local-map hackernews-map)
-        (mapc #'hackernews-render-post results)))))
+;; TODO: Derive from `tabulated-list-mode'?
+(define-derived-mode hackernews-mode special-mode "HN"
+  "Mode for browsing Hacker News.
+
+\\{hackernews-mode-map}"
+  :group 'hackernews
+  (setq hackernews--feed-state ())
+  (setq truncate-lines t)
+  (buffer-disable-undo))
 
 ;;; Retrieving and parsing
-
-(defun hackernews-top-stories (&optional limit offset)
-  "Get a list of stories.
-When specified, ignore all list entries after LIMIT and before
-OFFSET."
-  (unless hackernews-top-story-list
-    (setq hackernews-top-story-list
-          (append (hackernews-read-contents (hackernews--feed-url 'top)) ())))
-  (let ((reverse-offset (- (length hackernews-top-story-list) (or offset 0))))
-    (when (<= reverse-offset 0)
-      (signal 'hackernews-error '("No more stories available")))
-    (reverse (last (reverse (last hackernews-top-story-list reverse-offset))
-                   limit))))
-
-(defun hackernews-get-item (id)
-  "Build URL for item based on its ID then retreave & parse it."
-  (hackernews-read-contents (hackernews--item-url id)))
 
 (defun hackernews-read-contents (url)
   "Retrieve contents from URL and parse them as JSON.
@@ -291,6 +345,62 @@ Objects are decoded as alists and arrays as vectors."
           (json-array-type  'vector))
       (url-insert-file-contents url)
       (json-read))))
+
+(defun hackernews--retrieve-items (feed n ids &optional append)
+  "Retrieve and render at most N new items from FEED.
+Create and setup corresponding hackernews buffer if necessary.
+
+IDS is the vector of item IDs corresponding to FEED.
+
+When APPEND is nil, the contents of the hackernews buffer are
+replaced with the N new items rendered. Otherwise, APPEND should
+be an offset into IDS indicating where the previous render left
+off. The N new items are then rendered at the end of the
+hackernews buffer."
+  ;; TODO: * Allow negative N?
+  ;;       * Make asynchronous?
+  (let* ((name   (hackernews--feed-name feed))
+         (offset (or append 0))
+         (count  (max 0 (min (- (length ids) offset)
+                             (if n
+                                 (prefix-numeric-value n)
+                               hackernews-items-per-page))))
+         (items  (make-vector count ()))
+         (inhibit-read-only t))
+
+    ;; Retrieve items
+    (dotimes-with-progress-reporter (i count)
+        (format "Retrieving %d %s..." count name)
+      (aset items i (hackernews-read-contents (hackernews--item-url
+                                               (aref ids (+ offset i))))))
+
+    ;; Setup buffer
+    (pop-to-buffer (format "*hackernews %s*" name))
+    (unless append
+      (erase-buffer)
+      (hackernews-mode))
+
+    ;; Render items
+    (save-excursion
+      (goto-char (point-max))
+      (mapc #'hackernews-render-item items))
+
+    ;; Adjust point
+    (unless append
+      (hackernews-first-item))
+
+    ;; Persist state
+    (hackernews--put :feed   feed)
+    (hackernews--put :ids    ids)
+    (hackernews--put :offset (+ offset count))))
+
+(defun hackernews--load-stories (feed n)
+  "Refresh FEED list and render its top N items.
+Any previous hackernews buffer contents are overwritten."
+  ;; Display initial message before blocking to retrieve ID vector
+  (message "Retrieving %s..." (hackernews--feed-name feed))
+  (hackernews--retrieve-items
+   feed n (hackernews-read-contents (hackernews--feed-url feed))))
 
 (provide 'hackernews)
 
