@@ -1,6 +1,7 @@
 PACKAGE  = hackernews
 VERSION ?= git
 TARGET   = $(PACKAGE)-$(VERSION)
+RM      ?= rm -f
 
 help:
 	$(info Available options)
@@ -13,7 +14,7 @@ package:
 	mkdir -p $(TARGET)
 	cp hackernews.el hackernews-pkg.el README.md Screenshot.png COPYING $(TARGET)
 	tar cf $(TARGET).tar $(TARGET)
-	rm -rf $(TARGET)
+	$(RM) -r $(TARGET)
 
 clean:
-	rm -rf $(PACKAGE)-*.tar
+	$(RM) $(PACKAGE)-*.tar
