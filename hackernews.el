@@ -3,8 +3,9 @@
 ;; Copyright (C) 2012-2017 Lincoln de Sousa <lincoln@comum.org>
 
 ;; Author: Lincoln de Sousa <lincoln@comum.org>
-;; Keywords: hackernews
 ;; Version: 0.3.1
+;; Keywords: comm hypermedia news
+;; Homepage: https://github.com/clarete/hackernews.el
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
