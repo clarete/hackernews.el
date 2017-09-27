@@ -75,7 +75,7 @@ Just run `M-x hackernews`.
 
 ## License
 
-Copyright (C) 2012  Lincoln de Sousa <lincoln@comum.org>
+Copyright (C) 2012-2017 Lincoln de Sousa <lincoln@comum.org>
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -88,8 +88,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 [![instanc.es Badge](https://instanc.es/bin/clarete/hackernews.el.png)](http://instanc.es)
 [![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/clarete/hackernews.el/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
