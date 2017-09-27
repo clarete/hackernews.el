@@ -3,8 +3,9 @@
 ;; Copyright (C) 2012-2017 Lincoln de Sousa <lincoln@comum.org>
 
 ;; Author: Lincoln de Sousa <lincoln@comum.org>
-;; Version: 0.3.1
+;;         Basil L. Contovounesios <contovob@tcd.ie>
 ;; Keywords: comm hypermedia news
+;; Version: 0.4.0
 ;; Homepage: https://github.com/clarete/hackernews.el
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -39,15 +40,24 @@
 
 ;;; Faces
 
+(define-obsolete-face-alias 'hackernews-link-face
+  'hackernews-link "0.4.0")
+
 (defface hackernews-link
   '((t :inherit link :foreground "green" :underline nil))
   "Face used for links to stories."
   :group 'hackernews)
 
+(define-obsolete-face-alias 'hackernews-comment-count-face
+  'hackernews-comment-count "0.4.0")
+
 (defface hackernews-comment-count
   '((t :inherit hackernews-link))
   "Face used for comment counts."
   :group 'hackernews)
+
+(define-obsolete-face-alias 'hackernews-score-face
+  'hackernews-score "0.4.0")
 
 (defface hackernews-score
   '((t :inherit default))
@@ -56,8 +66,12 @@
 
 ;;; User options
 
+(define-obsolete-variable-alias 'hackernews-top-story-limit
+  'hackernews-items-per-page "0.4.0")
+
 (defcustom hackernews-items-per-page 20
   "Default number of stories to retrieve in one go."
+  :package-version '(hackernews . "0.4.0")
   :group 'hackernews
   :type 'integer)
 
@@ -75,6 +89,7 @@
 (defcustom hackernews-default-feed "top"
   "Default story feed to load.
 See `hackernews-feed-names' for supported feed types."
+  :package-version '(hackernews . "0.4.0")
   :group 'hackernews
   :type `(radio ,@(mapcar (lambda (feed)
                             `(const :tag ,(cdr feed) ,(car feed)))
@@ -90,6 +105,7 @@ arguments to `format-spec':
 %s - Item score;    see `hackernews-score-format'.
 %t - Item title;    see `hackernews-title-format'.
 %c - Item comments; see `hackernews-comments-format'."
+  :package-version '(hackernews . "0.4.0")
   :group 'hackernews
   :type 'string)
 
@@ -97,6 +113,7 @@ arguments to `format-spec':
   "Format specification for displaying the score of an item.
 The result is obtained by passing this string and the score count
 to `format'."
+  :package-version '(hackernews . "0.4.0")
   :group 'hackernews
   :type 'string)
 
@@ -104,6 +121,7 @@ to `format'."
   "Format specification for displaying the title of an item.
 The result is obtained by passing this string and the title to
 `format'."
+  :package-version '(hackernews . "0.4.0")
   :group 'hackernews
   :type 'string)
 
@@ -111,23 +129,27 @@ The result is obtained by passing this string and the title to
   "Format specification for displaying the comments of an item.
 The result is obtained by passing this string and the comments
 count to `format'."
+  :package-version '(hackernews . "0.4.0")
   :group 'hackernews
   :type 'string)
 
 (defcustom hackernews-preserve-point t
   "Whether to preserve point when loading more stories.
 When nil, point is placed on first new item retrieved."
+  :package-version '(hackernews . "0.4.0")
   :group 'hackernews
   :type 'boolean)
 
 (defcustom hackernews-before-render-hook ()
   "Hook called before rendering any new items."
+  :package-version '(hackernews . "0.4.0")
   :group 'hackernews
   :type 'hook)
 
 (defcustom hackernews-after-render-hook ()
   "Hook called after rendering any new items.
 The position of point will not have been affected by the render."
+  :package-version '(hackernews . "0.4.0")
   :group 'hackernews
   :type 'hook)
 
@@ -135,6 +157,7 @@ The position of point will not have been affected by the render."
   "Hook called as final step of loading any new items.
 The position of point may have been adjusted after the render and
 buffer-local feed state will have been updated."
+  :package-version '(hackernews . "0.4.0")
   :group 'hackernews
   :type 'hook)
 
@@ -144,6 +167,7 @@ When nil, `url-show-status' determines whether certain status
 messages are displayed when retrieving online data. This is
 suppressed by default so that the hackernews progress reporter is
 not interrupted."
+  :package-version '(hackernews . "0.4.0")
   :group 'hackernews
   :type 'boolean)
 
@@ -183,6 +207,9 @@ not interrupted."
     (define-key map [S-tab]         #'hackernews-previous-comment)
     map)
   "Keymap used in hackernews buffer.")
+
+(define-obsolete-variable-alias 'hackernews-map
+  'hackernews-mode-map "0.4.0")
 
 (defvar hackernews-button-map
   (let ((map (make-sparse-keymap)))

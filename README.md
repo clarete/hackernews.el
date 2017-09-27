@@ -1,35 +1,61 @@
 # Simple Hacker News Emacs Client
 
-It's simple because it doesn't actually interact with Hacker News. It
-uses a HTTP [API](https://hacker-news.firebaseio.com/v0) to get the
-data.
+It's simple because it doesn't actually interact with [Hacker
+News](https://news.ycombinator.com/). It uses a HTTP
+[API](https://hacker-news.firebaseio.com/v0) to get the data.
 
+## Interface
 
-## Navigation
+Version 0.4.0 of the `hackernews` package is able to fetch stories
+from six different Hacker News feeds, namely top, new, best, ask, show
+and job stories. The default feed is top stories, which corresponds to
+the Hacker News homepage.
 
-This version is able to list posts present in the main page, as well as
-their point and comment counts. You can also click (or `RET`) in the
-post titles to open them in a browser.
+The score, title, and comments count of each story is presented on a
+line of its own (see screenshot below), though this format is
+customizable. Both the title and comments count strings are
+hyperlinked to the Hacker News page for the item (the one with the
+comments), unless the story links to an external page, in which case
+the title is hyperlinked to that instead.
 
-Or you can press 't' to open the article in text only mode in emacs itself.
-It may not work for some articles due to the page structure.
+Clicking or typing <kbd>RET</kbd> on a link opens it with the command
+[`browse-url`](https://www.gnu.org/software/emacs/manual/html_node/emacs/Browse_002dURL.html),
+which selects a browser based on the user option
+`browse-url-browser-function`. This defaults to the system's default
+browser.
 
-The next versions will implement the upvote command and the possibility
-to interact with comments.
+Typing <kbd>t</kbd> on a link first tries to open it in
+[`eww`](https://www.gnu.org/software/emacs/manual/html_node/eww/index.html),
+if available, and otherwise passes it to the command
+`browse-url-text-emacs`, which consults the user option
+`browse-url-text-browser`. This defaults to running `lynx` within
+Emacs. Keep in mind that some websites do not render well in text
+mode.
+
+A future `hackernews` version may support upvoting and interacting
+with comments.
 
 ### Keymap
 
-Keybinding         | Description
--------------------|------------------------------------------------------------
-<kbd>RET</kbd>     | Open post in default browser
-<kbd>t</kbd>     | Open post in text-mode (may not work for all articles)
-<kbd>n</kbd>       | Navigate to next post
-<kbd>p</kbd>       | Navigate to previous post
-<kbd>TAB</kbd>     | Navigate to next comment
-<kbd>Shift-TAB</kbd>| Navigate to previous comment
-<kbd>m</kbd>       | Load more posts
-<kbd>g</kbd>       | Refresh posts
-<kbd>q</kbd>       | Quit
+Keybinding       | Description
+-----------------|-------------------------------------------------------
+<kbd>RET</kbd>   | Open link in default (external) browser
+<kbd>t</kbd>     | Open link in text-mode browser within Emacs
+<kbd>n</kbd>     | Move to next title link
+<kbd>p</kbd>     | Move to previous title link
+<kbd>TAB</kbd>   | Move to next comments count link
+<kbd>S-TAB</kbd> | Move to previous comments count link
+<kbd>m</kbd>     | Load more stories
+<kbd>g</kbd>     | Reload stories
+<kbd>f</kbd>     | Prompt user for a feed to switch to
+<kbd>q</kbd>     | Quit
+
+All feed re/loading commands accept an optional [numeric prefix
+argument](https://www.gnu.org/software/emacs/manual/html_node/emacs/Arguments.html)
+denoting how many stories to act on. For example, `M-5 0 g` refreshes
+the feed of the current `hackernews` buffer and fetches its top 50
+stories. With no prefix argument, the value of the user option
+`hackernews-items-per-page` is used instead.
 
 ## Screenshot
 
@@ -71,7 +97,23 @@ Alternatively, if you always want the package loaded at startup
 
 ## Usage
 
-Just run `M-x hackernews`.
+Just run `M-x hackernews RET`. This reads the feed specified by the
+user option `hackernews-default-feed`, which defaults to top stories,
+i.e. the Hacker News homepage. A direct command for each supported
+feed is also supported, e.g. `M-x hackernews-top-stories RET` or `M-x
+hackernews-ask-stories RET`. These direct commands are not autoloaded,
+however, so to use them before `hackernews` has been loaded you should
+autoload them yourself, e.g. by adding the following to your
+`user-init-file`:
+
+```el
+(autoload 'hackernews-ask-stories "hackernews" nil t)
+```
+
+### Customization
+
+You can list and modify all custom faces and variables by typing `M-x
+customize-group RET hackernews RET`.
 
 ## License
 
