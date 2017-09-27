@@ -39,17 +39,17 @@
 
 ;;; Faces
 
-(defface hackernews-link-face
+(defface hackernews-link
   '((t :inherit link :foreground "green" :underline nil))
   "Face used for links to stories."
   :group 'hackernews)
 
-(defface hackernews-comment-count-face
-  '((t :inherit hackernews-link-face))
+(defface hackernews-comment-count
+  '((t :inherit hackernews-link))
   "Face used for comment counts."
   :group 'hackernews)
 
-(defface hackernews-score-face
+(defface hackernews-score
   '((t :inherit default))
   "Face used for the score of a story."
   :group 'hackernews)
@@ -193,12 +193,12 @@ not interrupted."
 
 (define-button-type 'hackernews-link
   'action      #'hackernews-browse-url-action
-  'face        'hackernews-link-face
+  'face        'hackernews-link
   'follow-link t
   'keymap      hackernews-button-map)
 
 (define-button-type 'hackernews-comment-count
-  'face      'hackernews-comment-count-face
+  'face      'hackernews-comment-count
   'supertype 'hackernews-link)
 
 ;; Emulate `define-error'
@@ -344,7 +344,7 @@ their respective URLs."
      (format-spec hackernews-item-format
                   (format-spec-make
                    ?s (propertize (format hackernews-score-format score)
-                                  'face 'hackernews-score-face)
+                                  'face 'hackernews-score)
                    ?t (hackernews--button-string
                        'hackernews-link title (or item-url comments-url))
                    ?c (hackernews--button-string
