@@ -373,7 +373,9 @@ their respective URLs."
                    ?s (propertize (format hackernews-score-format score)
                                   'face 'hackernews-score)
                    ?t (hackernews--button-string
-                       'hackernews-link title (or item-url comments-url))
+                       'hackernews-link
+                       (format hackernews-title-format title)
+                       (or item-url comments-url))
                    ?c (hackernews--button-string
                        'hackernews-comment-count
                        (format hackernews-comments-format (or descendants 0))
