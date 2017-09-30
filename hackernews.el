@@ -29,6 +29,8 @@
 
 ;;; Code:
 
+(require 'browse-url)
+(require 'cus-edit)
 (require 'format-spec)
 (require 'json)
 (require 'url)
@@ -170,6 +172,17 @@ not interrupted."
   :package-version '(hackernews . "0.4.0")
   :group 'hackernews
   :type 'boolean)
+
+(defcustom hackernews-internal-browser-function
+  (if (functionp 'eww-browse-url)
+      #'eww-browse-url
+    #'browse-url-text-emacs)
+  "Function to load a given URL within Emacs.
+See `browse-url-browser-function' for some possible options."
+  :package-version '(hackernews . "0.4.0")
+  :group 'hackernews
+  :type `(radio ,@(butlast (cdr (custom-variable-type
+                                 'browse-url-browser-function)))))
 
 ;;; Internal definitions
 
@@ -338,11 +351,10 @@ N defaults to 1."
 
 (defun hackernews-button-browse-internal ()
   "Open URL of button under point within Emacs.
-Try `eww' if available, otherwise `browse-url-text-browser'."
+The URL is passed to `hackernews-internal-browser-function',
+which see."
   (interactive)
-  (funcall (if (fboundp 'eww-browse-url)
-               #'eww-browse-url
-             #'browse-url-text-emacs)
+  (funcall hackernews-internal-browser-function
            (button-get (button-at (point)) 'shr-url)))
 
 (defun hackernews--button-string (type label url)
