@@ -46,7 +46,7 @@
   'hackernews-link "0.4.0")
 
 (defface hackernews-link
-  '((t :inherit link :foreground "green" :underline nil))
+  '((t :inherit link :underline nil))
   "Face used for links to stories."
   :group 'hackernews)
 
