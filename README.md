@@ -52,9 +52,10 @@ Keybinding       | Description
 
 All feed re/loading commands accept an optional [numeric prefix
 argument](https://www.gnu.org/software/emacs/manual/html_node/emacs/Arguments.html)
-denoting how many stories to act on. For example, `M-5 0 g` refreshes
-the feed of the current `hackernews` buffer and fetches its top 50
-stories. With no prefix argument, the value of the user option
+denoting how many stories to act on. For example,
+<kbd>M-5</kbd><kbd>0</kbd><kbd>g</kbd> refreshes the feed of the
+current `hackernews` buffer and fetches its top 50 stories. With no
+prefix argument, the value of the user option
 `hackernews-items-per-page` is used instead.
 
 ## Screenshot
@@ -77,7 +78,7 @@ the following code to your `user-init-file`:
 (package-initialize)
 ```
 
-Then you can run `M-x package-install RET hackernews RET`.
+Then you can run <kbd>M-x</kbd>`package-install`<kbd>RET</kbd>`hackernews`<kbd>RET</kbd>.
 
 ### Manual download
 
@@ -97,14 +98,15 @@ Alternatively, if you always want the package loaded at startup
 
 ## Usage
 
-Just run `M-x hackernews RET`. This reads the feed specified by the
-user option `hackernews-default-feed`, which defaults to top stories,
-i.e. the Hacker News homepage. A direct command for each supported
-feed is also supported, e.g. `M-x hackernews-top-stories RET` or `M-x
-hackernews-ask-stories RET`. These direct commands are not autoloaded,
-however, so to use them before `hackernews` has been loaded you should
-autoload them yourself, e.g. by adding the following to your
-`user-init-file`:
+Just run <kbd>M-x</kbd>`hackernews`<kbd>RET</kbd>. This reads the feed
+specified by the user option `hackernews-default-feed`, which defaults
+to top stories, i.e. the Hacker News homepage. A direct command for
+each supported feed is also supported, e.g.
+<kbd>M-x</kbd>`hackernews-top-stories`<kbd>RET</kbd> or
+<kbd>M-x</kbd>`hackernews-ask-stories`<kbd>RET</kbd>. These direct
+commands are not autoloaded, however, so to use them before
+`hackernews` has been loaded you should autoload them yourself, e.g.
+by adding the following to your `user-init-file`:
 
 ```el
 (autoload 'hackernews-ask-stories "hackernews" nil t)
@@ -112,8 +114,24 @@ autoload them yourself, e.g. by adding the following to your
 
 ### Customization
 
-You can list and modify all custom faces and variables by typing `M-x
-customize-group RET hackernews RET`.
+You can list and modify all custom faces and variables by typing
+<kbd>M-x</kbd>`customize-group`<kbd>RET</kbd>`hackernews`<kbd>RET</kbd>.
+
+All `hackernews` buffers are displayed using the `pop-to-buffer`
+function for increased compatibility and customizability in how
+windows and frames are re/used. This function displays buffers in a
+new window by default. The simplest way to instead reuse the current
+window for `hackernews` buffers is to customize one of the user
+options `same-window-buffer-names`, `same-window-regexp` or in Emacs
+24 and subsequent versions, `display-buffer-alist` via
+<kbd>M-x</kbd>`customize-group`<kbd>RET</kbd>`windows`<kbd>RET</kbd>.
+
+If you prefer to roll out your own Elisp, you could add to your
+`user-init-file` something as simple as:
+
+```el
+(add-to-list 'same-window-regexps "\\`\\*hackernews .*\\*\\'")
+```
 
 ## License
 
