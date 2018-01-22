@@ -117,6 +117,22 @@ by adding the following to your `user-init-file`:
 You can list and modify all custom faces and variables by typing
 <kbd>M-x</kbd>`customize-group`<kbd>RET</kbd>`hackernews`<kbd>RET</kbd>.
 
+All `hackernews` buffers are displayed using the `pop-to-buffer`
+function for increased compatibility and customizability in how
+windows and frames are re/used. This function displays buffers in a
+new window by default. The simplest way to instead reuse the current
+window for `hackernews` buffers is to customize one of the user
+options `same-window-buffer-names`, `same-window-regexp` or in Emacs
+24 and subsequent versions, `display-buffer-alist` via
+<kbd>M-x</kbd>`customize-group`<kbd>RET</kbd>`windows`<kbd>RET</kbd>.
+
+If you prefer to roll out your own Elisp, you could add to your
+`user-init-file` something as simple as:
+
+```el
+(add-to-list 'same-window-regexps "\\`\\*hackernews .*\\*\\'")
+```
+
 ## License
 
 Copyright (C) 2012-2017 Lincoln de Sousa <lincoln@comum.org>
