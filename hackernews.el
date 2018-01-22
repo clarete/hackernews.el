@@ -184,6 +184,11 @@ See `browse-url-browser-function' for some possible options."
   :type `(radio ,@(butlast (cdr (custom-variable-type
                                  'browse-url-browser-function)))))
 
+(defcustom hackernews-open-in-other-window t
+  "Whether to open the hackernews buffer in another window."
+  :group 'hackernews
+  :type 'boolean)
+
 ;;; Internal definitions
 
 (defconst hackernews-api-version "v0"
@@ -416,6 +421,13 @@ Objects are decoded as alists and arrays as vectors."
       (url-insert-file-contents url)
       (json-read))))
 
+(defun hackernews--open-buffer (buffer)
+  "Open BUFFER in window according to `hackernews-open-in-other-window'."
+  (let ((buffer-function (if hackernews-open-in-other-window
+                             #'pop-to-buffer
+                           #'switch-to-buffer)))
+    (funcall buffer-function buffer)))
+
 (defun hackernews--retrieve-items (feed n ids &optional append)
   "Retrieve and render at most N new items from FEED.
 Create and setup corresponding hackernews buffer if necessary.
@@ -445,7 +457,7 @@ hackernews buffer."
                                                (aref ids (+ offset i))))))
 
     ;; Setup buffer
-    (pop-to-buffer (format "*hackernews %s*" name))
+    (hackernews--open-buffer (format "*hackernews %s*" name))
     (unless append
       (erase-buffer)
       (hackernews-mode))
