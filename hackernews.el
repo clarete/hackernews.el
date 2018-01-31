@@ -166,7 +166,7 @@ buffer-local feed state will have been updated."
 (defcustom hackernews-suppress-url-status t
   "Whether to suppress messages controlled by `url-show-status'.
 When nil, `url-show-status' determines whether certain status
-messages are displayed when retrieving online data. This is
+messages are displayed when retrieving online data.  This is
 suppressed by default so that the hackernews progress reporter is
 not interrupted."
   :package-version '(hackernews . "0.4.0")
@@ -369,8 +369,8 @@ which see."
 The user options `hackernews-score-format',
 `hackernews-title-format' and `hackernews-comments-format'
 control how each of the ITEM's score, title and comments count
-are formatted, respectively. These components are then combined
-according to `hackernews-item-format'. The title and comments
+are formatted, respectively.  These components are then combined
+according to `hackernews-item-format'.  The title and comments
 counts are rendered as text buttons which are hyperlinked to
 their respective URLs."
   (let* ((id           (cdr (assq 'id          item)))
@@ -431,9 +431,9 @@ Create and setup corresponding hackernews buffer if necessary.
 IDS is the vector of item IDs corresponding to FEED.
 
 When APPEND is nil, the contents of the hackernews buffer are
-replaced with the N new items rendered. Otherwise, APPEND should
+replaced with the N new items rendered.  Otherwise, APPEND should
 be an offset into IDS indicating where the previous render left
-off. The N new items are then rendered at the end of the
+off.  The N new items are then rendered at the end of the
 hackernews buffer."
   ;; TODO: * Allow negative N?
   ;;       * Make asynchronous?
