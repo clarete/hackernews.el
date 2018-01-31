@@ -405,16 +405,24 @@ their respective URLs."
 
 ;;; Retrieval
 
+(defalias 'hackernews--parse-json
+  (if (fboundp 'json-parse-buffer)
+      (lambda ()
+        (json-parse-buffer :object-type 'alist))
+    (lambda ()
+      (let ((json-object-type 'alist)
+            (json-array-type  'vector))
+        (json-read))))
+  "Read JSON object from current buffer starting at point.
+Objects are decoded as alists and arrays as vectors.")
+
 (defun hackernews-read-contents (url)
-  "Retrieve contents from URL and parse them as JSON.
-Objects are decoded as alists and arrays as vectors."
+  "Retrieve and read URL contents with `hackernews--parse-json'."
   (with-temp-buffer
-    (let ((json-object-type 'alist)
-          (json-array-type  'vector)
-          (url-show-status  (unless hackernews-suppress-url-status
-                              url-show-status)))
+    (let ((url-show-status (unless hackernews-suppress-url-status
+                             url-show-status)))
       (url-insert-file-contents url)
-      (json-read))))
+      (hackernews--parse-json))))
 
 (defun hackernews--retrieve-items (feed n ids &optional append)
   "Retrieve and render at most N new items from FEED.
