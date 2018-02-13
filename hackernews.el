@@ -359,7 +359,8 @@ which see."
 
 (defun hackernews--button-string (type label url)
   "Return button string of TYPE pointing to URL with LABEL."
-  (make-text-button label nil 'type type 'help-echo url 'shr-url url))
+  (make-text-button label nil 'type type 'help-echo url 'shr-url url)
+  label)
 
 (defun hackernews-render-item (item)
   "Render Hacker News ITEM in current buffer.
