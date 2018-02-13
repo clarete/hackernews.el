@@ -359,10 +359,7 @@ which see."
 
 (defun hackernews--button-string (type label url)
   "Return button string of TYPE pointing to URL with LABEL."
-  ;; TODO: Maintain single internal buffer for this purpose?
-  (with-temp-buffer
-    (insert-text-button label 'type type 'help-echo url 'shr-url url)
-    (buffer-string)))
+  (make-text-button label nil 'type type 'help-echo url 'shr-url url))
 
 (defun hackernews-render-item (item)
   "Render Hacker News ITEM in current buffer.
