@@ -93,9 +93,9 @@
 See `hackernews-feed-names' for supported feed types."
   :package-version '(hackernews . "0.4.0")
   :group 'hackernews
-  :type `(radio ,@(mapcar (lambda (feed)
-                            `(const :tag ,(cdr feed) ,(car feed)))
-                          hackernews-feed-names)))
+  :type (cons 'radio (mapcar (lambda (feed)
+                               (list 'const :tag (cdr feed) (car feed)))
+                             hackernews-feed-names)))
 
 ;; TODO: Allow the following `*-format' options to take on function values?
 
@@ -181,8 +181,8 @@ not interrupted."
 See `browse-url-browser-function' for some possible options."
   :package-version '(hackernews . "0.4.0")
   :group 'hackernews
-  :type `(radio ,@(butlast (cdr (custom-variable-type
-                                 'browse-url-browser-function)))))
+  :type (cons 'radio (butlast (cdr (custom-variable-type
+                                    'browse-url-browser-function)))))
 
 ;;; Internal definitions
 
