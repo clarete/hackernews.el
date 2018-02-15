@@ -524,14 +524,14 @@ End of feed; type \\[hackernews-reload] to load new items."))
 The Hacker News feed is determined by the user with completion
 and N defaults to `hackernews-items-per-page'."
   (interactive "P")
-  (let ((completion-extra-properties
-         (list :annotation-function #'hackernews--feed-annotation)))
-    (hackernews--load-stories
+  (hackernews--load-stories
+   (let ((completion-extra-properties
+          (list :annotation-function #'hackernews--feed-annotation)))
      (completing-read
       (format "Hacker News feed (default %s): " hackernews-default-feed)
       hackernews-feed-names nil t nil 'hackernews-feed-history
-      hackernews-default-feed)
-     n)))
+      hackernews-default-feed))
+   n))
 
 (defun hackernews-top-stories (&optional n)
   "Read top N Hacker News Top Stories.
