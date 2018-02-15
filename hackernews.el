@@ -39,7 +39,7 @@
   "Simple Hacker News client."
   :group 'external
   :prefix "hackernews-")
-
+
 ;;; Faces
 
 (define-obsolete-face-alias 'hackernews-link-face
@@ -65,7 +65,7 @@
   '((t :inherit default))
   "Face used for the score of a story."
   :group 'hackernews)
-
+
 ;;; User options
 
 (define-obsolete-variable-alias 'hackernews-top-story-limit
@@ -183,7 +183,7 @@ See `browse-url-browser-function' for some possible options."
   :group 'hackernews
   :type (cons 'radio (butlast (cdr (custom-variable-type
                                     'browse-url-browser-function)))))
-
+
 ;;; Internal definitions
 
 (defconst hackernews-api-version "v0"
@@ -244,7 +244,7 @@ See `browse-url-browser-function' for some possible options."
 ;; Emulate `define-error'
 (put 'hackernews-error 'error-conditions '(hackernews-error error))
 (put 'hackernews-error 'error-message    "Hackernews error")
-
+
 ;;; Utils
 
 (defun hackernews--get (prop)
@@ -294,7 +294,7 @@ This is intended as an :annotation-function in
             ((< x 0) -1)
             (t        0))))
   "Compatibility shim for `cl-signum'.")
-
+
 ;;; Motion
 
 (defun hackernews--forward-button (n type)
@@ -342,7 +342,7 @@ N defaults to 1."
   (interactive)
   (goto-char (point-min))
   (hackernews-next-item))
-
+
 ;;; UI
 
 (defun hackernews-browse-url-action (button)
@@ -362,7 +362,7 @@ which see."
   (make-text-button label nil 'type type 'help-echo url 'shr-url url)
   label)
 
-(defun hackernews-render-item (item)
+(defun hackernews--render-item (item)
   "Render Hacker News ITEM in current buffer.
 The user options `hackernews-score-format',
 `hackernews-title-format' and `hackernews-comments-format'
@@ -400,7 +400,7 @@ their respective URLs."
   (setq hackernews--feed-state ())
   (setq truncate-lines t)
   (buffer-disable-undo))
-
+
 ;;; Retrieval
 
 (defalias 'hackernews--parse-json
@@ -414,7 +414,7 @@ their respective URLs."
   "Read JSON object from current buffer starting at point.
 Objects are decoded as alists and arrays as vectors.")
 
-(defun hackernews-read-contents (url)
+(defun hackernews--read-contents (url)
   "Retrieve and read URL contents with `hackernews--parse-json'."
   (with-temp-buffer
     (let ((url-show-status (unless hackernews-suppress-url-status
@@ -447,8 +447,8 @@ hackernews buffer."
     ;; Retrieve items
     (dotimes-with-progress-reporter (i count)
         (format "Retrieving %d %s..." count name)
-      (aset items i (hackernews-read-contents (hackernews--item-url
-                                               (aref ids (+ offset i))))))
+      (aset items i (hackernews--read-contents (hackernews--item-url
+                                                (aref ids (+ offset i))))))
 
     ;; Setup buffer
     (pop-to-buffer (format "*hackernews %s*" name))
@@ -460,7 +460,7 @@ hackernews buffer."
     (run-hooks 'hackernews-before-render-hook)
     (save-excursion
       (goto-char (point-max))
-      (mapc #'hackernews-render-item items))
+      (mapc #'hackernews--render-item items))
     (run-hooks 'hackernews-after-render-hook)
 
     ;; Adjust point
@@ -481,8 +481,8 @@ Any previous hackernews buffer contents are overwritten."
   ;; Display initial message before blocking to retrieve ID vector
   (message "Retrieving %s..." (hackernews--feed-name feed))
   (hackernews--retrieve-items
-   feed n (hackernews-read-contents (hackernews--feed-url feed))))
-
+   feed n (hackernews--read-contents (hackernews--feed-url feed))))
+
 ;;; Feeds
 
 ;;;###autoload
