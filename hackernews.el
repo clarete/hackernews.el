@@ -202,9 +202,10 @@ See `browse-url-browser-function' for some possible options."
 
 (defvar hackernews--feed-state ()
   "Plist capturing state of current buffer's Hacker News feed.
-:feed   - Type of endpoint feed; see `hackernews-feed-names'.
-:ids    - Vector of item IDs last read from this feed.
-:offset - Number of items currently displayed.")
+:feed - Type of endpoint feed; see `hackernews-feed-names'.
+:ids  - Cons of number of items currently displayed and vector of
+        item IDs last read from this feed.  The `car' thus acts
+        as the current offset into the `cdr'.")
 (make-variable-buffer-local 'hackernews--feed-state)
 
 (defvar hackernews-feed-history ()
@@ -430,21 +431,29 @@ Objects are decoded as alists and arrays as vectors.")
       (url-insert-file-contents url)
       (hackernews--parse-json))))
 
-(defun hackernews--retrieve-items (feed n ids &optional append)
-  "Retrieve and render at most N new items from FEED.
+(defun hackernews--load-stories (feed n &optional append)
+  "Retrieve and render at most N items from FEED.
 Create and setup corresponding hackernews buffer if necessary.
 
-IDS is the vector of item IDs corresponding to FEED.
+If APPEND is nil, refresh the list of items from FEED and render
+at most N of its top items.  Any previous hackernews buffer
+contents are overwritten.
 
-When APPEND is nil, the contents of the hackernews buffer are
-replaced with the N new items rendered.  Otherwise, APPEND should
-be an offset into IDS indicating where the previous render left
-off.  The N new items are then rendered at the end of the
-hackernews buffer."
+Otherwise, APPEND should be a cons cell (OFFSET . IDS), where IDS
+is the vector of item IDs corresponding to FEED and OFFSET
+indicates where in IDS the previous retrieval and render left
+off.  At most N of FEED's items starting at OFFSET are then
+rendered at the end of the hackernews buffer."
   ;; TODO: * Allow negative N?
   ;;       * Make asynchronous?
   (let* ((name   (hackernews--feed-name feed))
-         (offset (or append 0))
+         (offset (or (car append) 0))
+         (ids    (if append
+                     (cdr append)
+                   ;; Display initial progress message before blocking
+                   ;; to retrieve ID vector
+                   (message "Retrieving %s..." name)
+                   (hackernews--read-contents (hackernews--feed-url feed))))
          (count  (max 0 (min (- (length ids) offset)
                              (if n
                                  (prefix-numeric-value n)
@@ -477,19 +486,10 @@ hackernews buffer."
       (hackernews-previous-item count))
 
     ;; Persist state
-    (hackernews--put :feed   feed)
-    (hackernews--put :ids    ids)
-    (hackernews--put :offset (+ offset count))
+    (hackernews--put :feed feed)
+    (hackernews--put :ids  (cons (+ offset count) ids))
 
     (run-hooks 'hackernews-finalize-hook)))
-
-(defun hackernews--load-stories (feed n)
-  "Refresh FEED list and render its top N items.
-Any previous hackernews buffer contents are overwritten."
-  ;; Display initial message before blocking to retrieve ID vector
-  (message "Retrieving %s..." (hackernews--feed-name feed))
-  (hackernews--retrieve-items
-   feed n (hackernews--read-contents (hackernews--feed-url feed))))
 
 ;;; Feeds
 
@@ -516,15 +516,14 @@ N defaults to `hackernews-items-per-page'."
 N defaults to `hackernews-items-per-page'."
   (interactive "P")
   (hackernews--ensure-major-mode)
-  (let ((feed   (hackernews--get :feed))
-        (ids    (hackernews--get :ids))
-        (offset (hackernews--get :offset)))
-    (unless (and feed ids offset)
+  (let ((feed (hackernews--get :feed))
+        (ids  (hackernews--get :ids)))
+    (unless (and feed ids)
       (signal 'hackernews-error '("Buffer in invalid state")))
-    (if (>= offset (length ids))
+    (if (>= (car ids) (length (cdr ids)))
         (message "%s" (substitute-command-keys "\
 End of feed; type \\[hackernews-reload] to load new items."))
-      (hackernews--retrieve-items feed n ids offset))))
+      (hackernews--load-stories feed n ids))))
 
 (defun hackernews-switch-feed (&optional n)
   "Read top N Hacker News stories from a different feed.
