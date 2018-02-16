@@ -403,6 +403,11 @@ their respective URLs."
   (setq hackernews--feed-state ())
   (setq truncate-lines t)
   (buffer-disable-undo))
+
+(defun hackernews--ensure-major-mode ()
+  "Barf if current buffer is not derived from `hackernews-mode'."
+  (unless (derived-mode-p #'hackernews-mode)
+    (signal 'hackernews-error '("Not a hackernews buffer"))))
 
 ;;; Retrieval
 
@@ -500,6 +505,7 @@ and N defaults to `hackernews-items-per-page'."
   "Reload top N Hacker News stories from current feed.
 N defaults to `hackernews-items-per-page'."
   (interactive "P")
+  (hackernews--ensure-major-mode)
   (let ((feed (hackernews--get :feed)))
     (if feed
         (hackernews--load-stories feed n)
@@ -509,6 +515,7 @@ N defaults to `hackernews-items-per-page'."
   "Load N more stories into hackernews buffer.
 N defaults to `hackernews-items-per-page'."
   (interactive "P")
+  (hackernews--ensure-major-mode)
   (let ((feed   (hackernews--get :feed))
         (ids    (hackernews--get :ids))
         (offset (hackernews--get :offset)))
