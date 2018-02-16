@@ -444,9 +444,25 @@ their respective URLs."
       (lambda ()
         (json-parse-buffer :object-type 'alist))
     (lambda ()
-      (let ((json-object-type 'alist)
-            (json-array-type  'vector))
-        (json-read))))
+      (condition-case err
+          (let ((json-object-type 'alist)
+                (json-array-type  'vector))
+            (json-read))
+        (json-readtable-error
+         (let ((data (cdr err)))
+           (when (nlistp data)
+             ;; GNU Emacs bug#30489
+             (setcdr err (list data))))
+         (lwarn 'hackernews :error
+                (concat "%s"
+                        (and (< emacs-major-version 25)
+                             "
+Incomplete data retrieved, likely due to GNU Emacs bug#23750.
+Consider upgrading to Emacs >= 25 or refer to the Troubleshooting
+section of the hackernews README file."))
+                (error-message-string err))
+         ;; Return filler object
+         json-null))))
   "Read JSON object from current buffer starting at point.
 Objects are decoded as alists and arrays as vectors.")
 

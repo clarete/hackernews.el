@@ -134,6 +134,26 @@ If you prefer to roll out your own Elisp, you could add to your
 (add-to-list 'same-window-regexps "\\`\\*hackernews .*\\*\\'")
 ```
 
+### Troubleshooting
+
+In general, errors and misbehavior pertaining to network retrieval and
+JSON parsing are probably due to bugs in older Emacsen.  The minimum
+recommended Emacs version for `hackernews` is 25.  Emacs 24 should
+work, but suffers from network security vulnerabilities that were
+fixed in version 25.
+
+A particularly annoying bug present in Emacs 23
+([bug#23750](https://debbugs.gnu.org/cgi/bugreport.cgi?bug=23750))
+materializes in `hackernews` as a JSON readtable error.  You will know
+this is the case if the `hackernews` buffer contains stories titled
+`nil` and/or a `*Warnings*` buffer exists and lists relevant error
+messages.  The solution is to either upgrade to a newer Emacs version
+(recommended) or apply [Dmitry Gutov's
+patch](https://debbugs.gnu.org/cgi/bugreport.cgi?bug=23750#95) in
+[bug#23750](https://debbugs.gnu.org/cgi/bugreport.cgi?bug=23750) for
+the function `url-http-create-request` in `lisp/url/url-http.el` (not
+recommended).
+
 ## License
 
 Copyright (C) 2012-2018 Lincoln de Sousa <lincoln@comum.org>
