@@ -48,6 +48,7 @@
 (defface hackernews-link
   '((t :inherit link :underline nil))
   "Face used for links to stories."
+  :package-version '(hackernews . "0.4.0")
   :group 'hackernews)
 
 (define-obsolete-face-alias 'hackernews-comment-count-face
@@ -56,6 +57,7 @@
 (defface hackernews-comment-count
   '((t :inherit hackernews-link))
   "Face used for comment counts."
+  :package-version '(hackernews . "0.4.0")
   :group 'hackernews)
 
 (define-obsolete-face-alias 'hackernews-score-face
@@ -64,6 +66,7 @@
 (defface hackernews-score
   '((t :inherit default))
   "Face used for the score of a story."
+  :package-version '(hackernews . "0.4.0")
   :group 'hackernews)
 
 ;;; User options
