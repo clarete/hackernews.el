@@ -160,8 +160,9 @@ The position of point will not have been affected by the render."
 
 (defcustom hackernews-finalize-hook ()
   "Hook called as final step of loading any new items.
-The position of point may have been adjusted after the render and
-buffer-local feed state will have been updated."
+The position of point may have been adjusted after the render,
+buffer-local feed state will have been updated and the hackernews
+buffer will be current and displayed in the selected window."
   :package-version '(hackernews . "0.4.0")
   :group 'hackernews
   :type 'hook)
@@ -202,9 +203,11 @@ See `browse-url-browser-function' for some possible options."
 
 (defvar hackernews--feed-state ()
   "Plist capturing state of current buffer's Hacker News feed.
-:feed   - Type of endpoint feed; see `hackernews-feed-names'.
-:ids    - Vector of item IDs last read from this feed.
-:offset - Number of items currently displayed.")
+:feed     - Type of endpoint feed; see `hackernews-feed-names'.
+:items    - Vector holding items being or last fetched.
+:register - Cons of number of items currently displayed and
+            vector of item IDs last read from this feed.
+            The `car' is thus an offset into the `cdr'.")
 (make-variable-buffer-local 'hackernews--feed-state)
 
 (defvar hackernews-feed-history ()
@@ -394,6 +397,31 @@ their respective URLs."
                        (format hackernews-comments-format (or descendants 0))
                        comments-url))))))
 
+(defun hackernews--display-items ()
+  "Render items associated with, and pop to, the current buffer."
+  (let* ((reg   (hackernews--get :register))
+         (items (hackernews--get :items))
+         (nitem (length items))
+         (inhibit-read-only t))
+
+    ;; Render items
+    (run-hooks 'hackernews-before-render-hook)
+    (save-excursion
+      (goto-char (point-max))
+      (mapc #'hackernews--render-item items))
+    (run-hooks 'hackernews-after-render-hook)
+
+    ;; Adjust point
+    (unless (or (<= nitem 0) hackernews-preserve-point)
+      (goto-char (point-max))
+      (hackernews-previous-item nitem))
+
+    ;; Persist new offset
+    (setcar reg (+ (car reg) nitem)))
+
+  (pop-to-buffer (current-buffer))
+  (run-hooks 'hackernews-finalize-hook))
+
 ;; TODO: Derive from `tabulated-list-mode'?
 (define-derived-mode hackernews-mode special-mode "HN"
   "Mode for browsing Hacker News.
@@ -403,6 +431,11 @@ their respective URLs."
   (setq hackernews--feed-state ())
   (setq truncate-lines t)
   (buffer-disable-undo))
+
+(defun hackernews--ensure-major-mode ()
+  "Barf if current buffer is not derived from `hackernews-mode'."
+  (unless (derived-mode-p #'hackernews-mode)
+    (signal 'hackernews-error '("Not a hackernews buffer"))))
 
 ;;; Retrieval
 
@@ -425,66 +458,60 @@ Objects are decoded as alists and arrays as vectors.")
       (url-insert-file-contents url)
       (hackernews--parse-json))))
 
-(defun hackernews--retrieve-items (feed n ids &optional append)
-  "Retrieve and render at most N new items from FEED.
+(defun hackernews--retrieve-items ()
+  "Retrieve items associated with current buffer."
+  (let* ((items  (hackernews--get :items))
+         (reg    (hackernews--get :register))
+         (nitem  (length items))
+         (offset (car reg))
+         (ids    (cdr reg)))
+    (dotimes-with-progress-reporter (i nitem)
+        (format "Retrieving %d %s..."
+                nitem (hackernews--feed-name (hackernews--get :feed)))
+      (aset items i (hackernews--read-contents
+                     (hackernews--item-url (aref ids (+ offset i))))))))
+
+(defun hackernews--load-stories (feed n &optional append)
+  "Retrieve and render at most N items from FEED.
 Create and setup corresponding hackernews buffer if necessary.
 
-IDS is the vector of item IDs corresponding to FEED.
+If APPEND is nil, refresh the list of items from FEED and render
+at most N of its top items.  Any previous hackernews buffer
+contents are overwritten.
 
-When APPEND is nil, the contents of the hackernews buffer are
-replaced with the N new items rendered.  Otherwise, APPEND should
-be an offset into IDS indicating where the previous render left
-off.  The N new items are then rendered at the end of the
-hackernews buffer."
+Otherwise, APPEND should be a cons cell (OFFSET . IDS), where IDS
+is the vector of item IDs corresponding to FEED and OFFSET
+indicates where in IDS the previous retrieval and render left
+off.  At most N of FEED's items starting at OFFSET are then
+rendered at the end of the hackernews buffer."
   ;; TODO: * Allow negative N?
   ;;       * Make asynchronous?
   (let* ((name   (hackernews--feed-name feed))
-         (offset (or append 0))
-         (count  (max 0 (min (- (length ids) offset)
-                             (if n
-                                 (prefix-numeric-value n)
-                               hackernews-items-per-page))))
-         (items  (make-vector count ()))
-         (inhibit-read-only t))
+         (offset (or (car append) 0))
+         (ids    (if append
+                     (cdr append)
+                   ;; Display initial progress message before blocking
+                   ;; to retrieve ID vector
+                   (message "Retrieving %s..." name)
+                   (hackernews--read-contents (hackernews--feed-url feed)))))
 
-    ;; Retrieve items
-    (dotimes-with-progress-reporter (i count)
-        (format "Retrieving %d %s..." count name)
-      (aset items i (hackernews--read-contents (hackernews--item-url
-                                                (aref ids (+ offset i))))))
+    (with-current-buffer (get-buffer-create (format "*hackernews %s*" name))
+      (unless append
+        (let ((inhibit-read-only t))
+          (erase-buffer))
+        (hackernews-mode))
 
-    ;; Setup buffer
-    (pop-to-buffer (format "*hackernews %s*" name))
-    (unless append
-      (erase-buffer)
-      (hackernews-mode))
+      (hackernews--put :feed     feed)
+      (hackernews--put :register (cons offset ids))
+      (hackernews--put :items    (make-vector
+                                  (max 0 (min (- (length ids) offset)
+                                              (if n
+                                                  (prefix-numeric-value n)
+                                                hackernews-items-per-page)))
+                                  ()))
 
-    ;; Render items
-    (run-hooks 'hackernews-before-render-hook)
-    (save-excursion
-      (goto-char (point-max))
-      (mapc #'hackernews--render-item items))
-    (run-hooks 'hackernews-after-render-hook)
-
-    ;; Adjust point
-    (unless (and append hackernews-preserve-point)
-      (goto-char (point-max))
-      (hackernews-previous-item count))
-
-    ;; Persist state
-    (hackernews--put :feed   feed)
-    (hackernews--put :ids    ids)
-    (hackernews--put :offset (+ offset count))
-
-    (run-hooks 'hackernews-finalize-hook)))
-
-(defun hackernews--load-stories (feed n)
-  "Refresh FEED list and render its top N items.
-Any previous hackernews buffer contents are overwritten."
-  ;; Display initial message before blocking to retrieve ID vector
-  (message "Retrieving %s..." (hackernews--feed-name feed))
-  (hackernews--retrieve-items
-   feed n (hackernews--read-contents (hackernews--feed-url feed))))
+      (hackernews--retrieve-items)
+      (hackernews--display-items))))
 
 ;;; Feeds
 
@@ -500,6 +527,7 @@ and N defaults to `hackernews-items-per-page'."
   "Reload top N Hacker News stories from current feed.
 N defaults to `hackernews-items-per-page'."
   (interactive "P")
+  (hackernews--ensure-major-mode)
   (let ((feed (hackernews--get :feed)))
     (if feed
         (hackernews--load-stories feed n)
@@ -509,29 +537,29 @@ N defaults to `hackernews-items-per-page'."
   "Load N more stories into hackernews buffer.
 N defaults to `hackernews-items-per-page'."
   (interactive "P")
-  (let ((feed   (hackernews--get :feed))
-        (ids    (hackernews--get :ids))
-        (offset (hackernews--get :offset)))
-    (unless (and feed ids offset)
+  (hackernews--ensure-major-mode)
+  (let ((feed (hackernews--get :feed))
+        (reg  (hackernews--get :register)))
+    (unless (and feed reg)
       (signal 'hackernews-error '("Buffer in invalid state")))
-    (if (>= offset (length ids))
+    (if (>= (car reg) (length (cdr reg)))
         (message "%s" (substitute-command-keys "\
 End of feed; type \\[hackernews-reload] to load new items."))
-      (hackernews--retrieve-items feed n ids offset))))
+      (hackernews--load-stories feed n reg))))
 
 (defun hackernews-switch-feed (&optional n)
   "Read top N Hacker News stories from a different feed.
 The Hacker News feed is determined by the user with completion
 and N defaults to `hackernews-items-per-page'."
   (interactive "P")
-  (let ((completion-extra-properties
-         (list :annotation-function #'hackernews--feed-annotation)))
-    (hackernews--load-stories
+  (hackernews--load-stories
+   (let ((completion-extra-properties
+          (list :annotation-function #'hackernews--feed-annotation)))
      (completing-read
       (format "Hacker News feed (default %s): " hackernews-default-feed)
       hackernews-feed-names nil t nil 'hackernews-feed-history
-      hackernews-default-feed)
-     n)))
+      hackernews-default-feed))
+   n))
 
 (defun hackernews-top-stories (&optional n)
   "Read top N Hacker News Top Stories.
