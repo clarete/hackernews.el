@@ -134,6 +134,18 @@ If you prefer to roll out your own Elisp, you could add to your
 (add-to-list 'same-window-regexps "\\`\\*hackernews .*\\*\\'")
 ```
 
+### Troubleshooting
+
+In general, errors and misbehavior pertaining to network retrieval and
+JSON parsing are probably due to bugs in older Emacsen.  The minimum
+recommended Emacs version for `hackernews` is 25.  Emacs 24 should
+work, but suffers from network security vulnerabilities that were
+fixed in version 25.
+
+In any case, please report any problems on the project's [issue
+tracker](https://github.com/clarete/hackernews.el/issues), so that the
+possibility for mitigation can be investigated.
+
 ## License
 
 Copyright (C) 2012-2018 Lincoln de Sousa <lincoln@comum.org>
