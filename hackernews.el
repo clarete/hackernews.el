@@ -87,7 +87,6 @@
     ("ask"  . "ask stories")
     ("show" . "show stories")
     ("job"  . "job stories"))
-  ;; TODO: Should the keys all be symbols?
   "Map feed types as strings to their display names.")
 (put 'hackernews-feed-names 'risky-local-variable t)
 
