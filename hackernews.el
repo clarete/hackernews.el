@@ -40,7 +40,7 @@
   :group 'external
   :prefix "hackernews-")
 
-;;; Faces
+;;;; Faces
 
 (define-obsolete-face-alias 'hackernews-link-face
   'hackernews-link "0.4.0")
@@ -69,7 +69,7 @@
   :package-version '(hackernews . "0.4.0")
   :group 'hackernews)
 
-;;; User options
+;;;; User options
 
 (define-obsolete-variable-alias 'hackernews-top-story-limit
   'hackernews-items-per-page "0.4.0")
@@ -187,7 +187,7 @@ See `browse-url-browser-function' for some possible options."
   :type (cons 'radio (butlast (cdr (custom-variable-type
                                     'browse-url-browser-function)))))
 
-;;; Internal definitions
+;;;; Internal definitions
 
 (defconst hackernews-api-version "v0"
   "Currently supported version of the Hacker News API.")
@@ -250,7 +250,7 @@ See `browse-url-browser-function' for some possible options."
 (put 'hackernews-error 'error-conditions '(hackernews-error error))
 (put 'hackernews-error 'error-message    "Hackernews error")
 
-;;; Utils
+;;;; Utils
 
 (defun hackernews--get (prop)
   "Extract value of PROP from `hackernews--feed-state'."
@@ -300,7 +300,7 @@ This is intended as an :annotation-function in
             (t        0))))
   "Compatibility shim for `cl-signum'.")
 
-;;; Motion
+;;;; Motion
 
 (defun hackernews--forward-button (n type)
   "Move to Nth next button of TYPE (previous if N is negative)."
@@ -348,7 +348,7 @@ N defaults to 1."
   (goto-char (point-min))
   (hackernews-next-item))
 
-;;; UI
+;;;; UI
 
 (defun hackernews-browse-url-action (button)
   "Pass URL of BUTTON to `browse-url'."
@@ -436,7 +436,7 @@ their respective URLs."
   (unless (derived-mode-p #'hackernews-mode)
     (signal 'hackernews-error '("Not a hackernews buffer"))))
 
-;;; Retrieval
+;;;; Retrieval
 
 (defalias 'hackernews--parse-json
   (if (fboundp 'json-parse-buffer)
@@ -512,7 +512,7 @@ rendered at the end of the hackernews buffer."
       (hackernews--retrieve-items)
       (hackernews--display-items))))
 
-;;; Feeds
+;;;; Feeds
 
 ;;;###autoload
 (defun hackernews (&optional n)
