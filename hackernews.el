@@ -252,6 +252,14 @@ See `browse-url-browser-function' for some possible options."
 
 ;;;; Utils
 
+(defun hackernews--error (format &rest args)
+  "Like `error', but signal error symbol `hackernews-error'."
+  (signal 'hackernews-error
+          (list (apply (if (functionp 'format-message)
+                           #'format-message
+                         #'format)
+                       format args))))
+
 (defun hackernews--get (prop)
   "Extract value of PROP from `hackernews--feed-state'."
   (plist-get hackernews--feed-state prop))
@@ -434,7 +442,7 @@ their respective URLs."
 (defun hackernews--ensure-major-mode ()
   "Barf if current buffer is not derived from `hackernews-mode'."
   (unless (derived-mode-p #'hackernews-mode)
-    (signal 'hackernews-error '("Not a hackernews buffer"))))
+    (hackernews--error "Not a hackernews buffer")))
 
 ;;;; Retrieval
 
@@ -530,7 +538,7 @@ N defaults to `hackernews-items-per-page'."
   (let ((feed (hackernews--get :feed)))
     (if feed
         (hackernews--load-stories feed n)
-      (signal 'hackernews-error '("Buffer unassociated with feed")))))
+      (hackernews--error "Buffer unassociated with feed"))))
 
 (defun hackernews-load-more-stories (&optional n)
   "Load N more stories into hackernews buffer.
@@ -540,7 +548,7 @@ N defaults to `hackernews-items-per-page'."
   (let ((feed (hackernews--get :feed))
         (reg  (hackernews--get :register)))
     (unless (and feed reg)
-      (signal 'hackernews-error '("Buffer in invalid state")))
+      (hackernews--error "Buffer in invalid state"))
     (if (>= (car reg) (length (cdr reg)))
         (message "%s" (substitute-command-keys "\
 End of feed; type \\[hackernews-reload] to load new items."))
