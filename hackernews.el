@@ -182,25 +182,52 @@ See `browse-url-browser-function' for some possible options."
                                     'browse-url-browser-function)))))
 
 (defvar hackernews-backends
-  '((url-queue :ids   hackernews-url-queue-ids
-               :items hackernews-url-queue-items
-               :doc   "Use the `url-queue' library (asynchronous).")
-    (mm-async  :ids   hackernews-mm-async-ids
-               :items hackernews-mm-async-items
-               :doc   "Use the `mm-url' library (asynchronous).")
-    (url-chain :ids   hackernews-url-chain-ids
-               :items hackernews-url-chain-items
-               :doc   "\
-Emulate `url-queue' by chaining `url-retrieve' callbacks (asynchronous).")
-    (url-sync  :ids   hackernews-url-sync-ids
-               :items hackernews-url-sync-items
-               :doc   "Use `url-retrieve-synchronously' (synchronous).")
-    (mm-sync2  :ids   hackernews-mm-sync2-ids
-               :items hackernews-mm-sync2-items
-               :doc   "Use the `mm-url' library (synchronous).")
-    (mm-sync   :ids   hackernews-mm-sync-ids
-               :items hackernews-mm-sync-items
-               :doc   "Use the `mm-url' library (synchronous)."))
+  '((url-queue
+     :ids   hackernews-url-queue-ids
+     :items hackernews-url-queue-items
+     :doc   "\
+Asynchronous retrieval using the `url-queue' library.")
+    (url-chain
+     :ids   hackernews-url-chain-ids
+     :items hackernews-url-chain-items
+     :doc   "\
+Asynchronous retrieval using the `url' library.
+Emulates `url-queue' by chaining `url-retrieve' callbacks.")
+    (url-sync
+     :ids   hackernews-url-sync-ids
+     :items hackernews-url-sync-items
+     :doc   "\
+Synchronous retrieval using the `url' library.")
+    (mm-async
+     :ids   hackernews-mm-async-ids
+     :items hackernews-mm-async-items
+     :doc   "\
+Asynchronous retrieval using the `mm-url' library.
+Like `url-chain', but with sentinel, not callback, chains.")
+    (mm-asyncs
+     :ids   hackernews-mm-async-ids
+     :items hackernews-mm-asyncs-items
+     :doc   "\
+Asynchronous retrieval using the `mm-url' library.
+This backend is significantly faster than `mm-async' by passing
+multiple URLs to each subprocess, thus spawning fewer
+overall (the trailing 's' in `mm-asyncs' alludes to both
+plurality and speed).  It is not enabled by default because it
+renders the progress reporter far less, if at all, effective, and
+some `mm-url-predefined-programs', such as `lynx', do not accept
+multiple URL arguments.")
+    (mm-sync
+     :ids   hackernews-mm-sync-ids
+     :items hackernews-mm-sync-items
+     :doc   "\
+Synchronous retrieval using the `mm-url' library.")
+    (mm-syncs
+     :ids   hackernews-mm-sync-ids
+     :items hackernews-mm-syncs-items
+     :doc   "\
+Synchronous retrieval using the `mm-url' library.
+This backend is to `mm-sync' what `mm-asyncs' (which see) is to
+`mm-async'."))
   "Map retrieval backends to their property lists.
 The following properties are currently understood:
 :ids   - Function for retrieving the IDs of a given buffer.
@@ -557,6 +584,28 @@ their respective URLs."
     (plist-put state :nitem nitem)
     (when journo (progress-reporter-update journo (- nitem)))))
 
+(defun hackernews--dispatch (dispatcher buffer)
+  "Partition BUFFER's items evenly across a vector.
+The length of the resultant vector is between 1 and
+`hackernews-async-processes', inclusive.  Each of its elements is
+a list of cells (INDEX . URL), where URL specifies a Hacker News
+item to be fetched and INDEX determines its ordering in BUFFER's
+items vector."
+  (let* ((state  (hackernews-state buffer))
+         (ids    (plist-get state :ids))
+         (offset (plist-get state :offset))
+         (nitem  (plist-get state :nitem))
+         (njob   (max 1 (min nitem hackernews-async-processes)))
+         (jobs   (make-vector njob ())))
+    (dotimes (i nitem)
+      (let ((j (% i njob)))
+        (aset jobs j
+              (cons (cons i (hackernews--item-url (aref ids (+ offset i))))
+                    (aref jobs j)))))
+    (mapc (lambda (job)
+            (funcall dispatcher job buffer))
+          jobs)))
+
 (defun hackernews--retrieve-items (buffer)
   "Retrieve items associated with BUFFER."
   (let* ((state (hackernews-state buffer))
@@ -611,34 +660,13 @@ displayed in the corresponding hackernews buffer."
                                   hackernews-items-per-page))
       (if append
           ;; Have IDs; skip to retrieving items subset
-          (funcall (plist-get backend :items) buffer)
+          (hackernews--retrieve-items buffer)
         ;; Retrieve IDs
         (plist-put state :journo (and hackernews-report-progress
                                       (make-progress-reporter
                                        (format "Retrieving %s..." name)
                                        0 0)))
         (funcall (plist-get backend :ids) buffer)))))
-
-(defun hackernews--jobs (buffer)
-  "Partition BUFFER's items evenly across a vector.
-The length of the resultant vector is between 1 and
-`hackernews-async-processes', inclusive.  Each of its elements is
-a list of cells (INDEX . URL), where URL specifies a Hacker News
-item to be fetched and INDEX determines its ordering in BUFFER's
-items vector."
-  (let* ((state  (hackernews-state buffer))
-         (ids    (plist-get state :ids))
-         (offset (plist-get state :offset))
-         (nitem  (plist-get state :nitem))
-         (njob   (max 1 (min nitem hackernews-async-processes)))
-         (jobs   (make-vector njob ())))
-    (dotimes (i nitem)
-      (let ((j (% i njob)))
-        (aset jobs j
-              (cons (cons i (hackernews--item-url (aref ids (+ offset i))))
-                    (aref jobs j)))))
-    ;; Byte-compiler whines if placed in `dotimes' spec
-    jobs))
 
 ;; `url'
 
@@ -693,9 +721,7 @@ This is a convenience wrapper which passes CALLBACK and ARGS to
 ;; `url-queue'
 
 (defun hackernews--url-queue-retrieve (url callback &rest args)
-  "Retrieve URL asynchronously with `url-queue-retrieve'.
-This is a convenience wrapper which passes CALLBACK and ARGS to
-`hackernews--url-read-callback' after retrieval."
+  "Like `hackernews--url-retrieve', but using `url-queue'."
   (url-queue-retrieve url
                       #'hackernews--url-read-callback
                       (cons url (cons callback args))
@@ -731,23 +757,21 @@ This is a convenience wrapper which passes CALLBACK and ARGS to
                             #'hackernews--store-ids
                             buffer))
 
-(defun hackernews--url-chain-item (item index chain buffer)
+(defun hackernews--url-chain-item (item index job buffer)
   ""
   (hackernews--store-item item index buffer)
-  (funcall chain buffer))
+  (hackernews--url-chain-job job buffer))
+
+(defun hackernews--url-chain-job (job buffer)
+  ""
+  (if job
+      (hackernews--url-retrieve (cdar job) #'hackernews--url-chain-item
+                                (caar job) (cdr job) buffer)
+    (hackernews--maybe-display buffer)))
 
 (defun hackernews-url-chain-items (buffer)
   ""
-  (mapc (lambda (job)
-          ;; Reduce job list to callback chain
-          (let ((chain #'hackernews--maybe-display))
-            (dolist (item job)
-              (setq chain
-                    (apply-partially #'hackernews--url-retrieve
-                                     (cdr item) #'hackernews--url-chain-item
-                                     (car item) chain)))
-            (funcall chain buffer)))
-        (hackernews--jobs buffer)))
+  (hackernews--dispatch #'hackernews--url-chain-job buffer))
 
 ;; `url-sync'
 
@@ -770,74 +794,115 @@ This is a convenience wrapper which passes CALLBACK and ARGS to
 ;; `mm-url'
 
 (defun hackernews--mm-command ()
-  ""
+  "Return list of `mm-url' external program and its arguments."
   (if (symbolp mm-url-program)
       (cdr (assq mm-url-program mm-url-predefined-programs))
     (cons mm-url-program mm-url-arguments)))
 
-(defun hackernews--check-sentinel (process msg)
+(defun hackernews--mm-reads (&rest args)
+  "Read contents of ARGS as a list of JSON objects.
+ARGS may entirely comprise either buffer objects, whose contents
+are read directly and which are subsequently killed, or URLs,
+whose contents are first retrieved synchronously."
+  (with-temp-buffer
+    (if (bufferp (car args))
+        (dolist (buffer args)
+          (insert-buffer-substring buffer)
+          (kill-buffer buffer))
+      (let* ((command (hackernews--mm-command))
+             (status  (apply #'call-process (car command) nil t nil
+                             (append (cdr command) args))))
+        (unless (eq status 0)
+          (hackernews--error "Program `%s' returned exit status: %s"
+                             (car command) status))))
+    (goto-char (point-min))
+    (let (objects)
+      (while (progn (push (hackernews--parse-json) objects)
+                    (not (eobp))))
+      (nreverse objects))))
+
+(defun hackernews--mm-read (arg)
+  "Like `hackernews--mm-reads', but acting on single ARG."
+  (car (hackernews--mm-reads arg)))
+
+(defun hackernews--mm-sentinel (callback process msg)
   ""
-  (let ((name (process-name process)))
+  (let ((name   (process-name   process))
+        (buffer (process-buffer process)))
     (and (eq (process-status process) 'exit)
          (or (zerop (process-exit-status process))
              (hackernews--error "Process `%s' %s" name (substring msg 0 -1)))
-         (or (buffer-live-p (process-buffer process))
-             (hackernews--error "Process `%s' buffer killed" name)))))
+         (or (buffer-live-p buffer)
+             (hackernews--error "Process `%s' buffer killed" name))
+         (apply callback
+                (process-plist process)
+                (hackernews--mm-reads buffer)))))
 
-(defun hackernews--mm-retrieve (&rest urls)
+(defun hackernews--mm-retrieve (callback plist &rest urls)
   ""
-  (let ((name " *hackernews*")
-        process-connection-type)
-    (apply #'start-process name (generate-new-buffer-name name)
-           (append (hackernews--mm-command) urls))))
+  (let* (process-connection-type
+         (name    " *hackernews*")
+         (process (apply #'start-process name (generate-new-buffer-name name)
+                         (append (hackernews--mm-command) urls))))
+    (set-process-plist    process plist)
+    (set-process-sentinel process
+                          (apply-partially #'hackernews--mm-sentinel callback))
+    process))
 
 ;; `mm-async'
 
-(defun hackernews--mm-ids-sentinel (process msg)
+(defun hackernews--mm-store-ids (plist ids)
   ""
-  (when (hackernews--check-sentinel process msg)
-    (hackernews--store-ids (with-current-buffer (process-buffer process)
-                             (goto-char (point-min))
-                             (hackernews--parse-json))
-                           (process-get process :hn-buffer))))
+  (hackernews--store-ids ids (plist-get plist :buffer)))
 
 (defun hackernews-mm-async-ids (buffer)
   ""
-  (let ((process (hackernews--mm-retrieve (hackernews--feed-url buffer))))
-    (set-process-sentinel process #'hackernews--mm-ids-sentinel)
-    (set-process-plist process (list :hn-buffer buffer))))
+  (hackernews--mm-retrieve #'hackernews--mm-store-ids
+                           (list :buffer buffer)
+                           (hackernews--feed-url buffer)))
 
-(defun hackernews--mm-items-sentinel (process msg)
+(defun hackernews--mm-async-item (plist item)
   ""
-  (when (hackernews--check-sentinel process msg)
-    (let ((buffer (process-get process :hn-buffer)))
-      (with-current-buffer (process-buffer process)
-        (goto-char (point-min))
-        (dolist (index (process-get process :hn-indices))
-          (hackernews--store-item (hackernews--parse-json) index buffer)))
-      (hackernews--maybe-display buffer))))
+  (let ((buffer (plist-get plist :buffer)))
+    (hackernews--store-item item (plist-get plist :index) buffer)
+    (hackernews--mm-async-job (plist-get plist :job) buffer)))
+
+(defun hackernews--mm-async-job (job buffer)
+  ""
+  (if job
+      (hackernews--mm-retrieve #'hackernews--mm-async-item
+                               (list :job (cdr job) :buffer buffer
+                                     :index (caar job))
+                               (cdar job))
+    (hackernews--maybe-display buffer)))
 
 (defun hackernews-mm-async-items (buffer)
   ""
-  (mapc (lambda (job)
-          (let ((process (apply #'hackernews--mm-retrieve (mapcar #'cdr job))))
-            (set-process-sentinel process #'hackernews--mm-items-sentinel)
-            (set-process-plist process (list :hn-buffer  buffer
-                                             :hn-indices (mapcar #'car job)))))
-        (hackernews--jobs buffer)))
+  (hackernews--dispatch #'hackernews--mm-async-job buffer))
+
+;; `mm-asyncs'
+
+(defun hackernews--mm-store-items (plist &rest items)
+  ""
+  (let ((buffer (plist-get plist :buffer)))
+    (dolist (index (plist-get plist :indices))
+      (hackernews--store-item (pop items) index buffer))
+    (hackernews--maybe-display buffer)))
+
+(defun hackernews--mm-asyncs-job (job buffer)
+  ""
+  (if job
+      (apply #'hackernews--mm-retrieve
+             #'hackernews--mm-store-items
+             (list :buffer buffer :indices (mapcar #'car job))
+             (mapcar #'cdr job))
+    (hackernews--maybe-display buffer)))
+
+(defun hackernews-mm-asyncs-items (buffer)
+  ""
+  (hackernews--dispatch #'hackernews--mm-asyncs-job buffer))
 
 ;; `mm-sync'
-
-(defun hackernews--mm-read (url)
-  ""
-  (with-temp-buffer
-    (let* ((command (hackernews--mm-command))
-           (status  (apply #'call-process (car command) nil t nil
-                           (append (cdr command) (list url)))))
-      (unless (eq status 0)
-        (hackernews--error "Error retrieving %s: %s" url status)))
-    (goto-char (point-min))
-    (hackernews--parse-json)))
 
 (defun hackernews-mm-sync-ids (buffer)
   ""
@@ -847,29 +912,6 @@ This is a convenience wrapper which passes CALLBACK and ARGS to
 (defun hackernews-mm-sync-items (buffer)
   ""
   (let* ((state  (hackernews-state buffer))
-         (offset (plist-get state :offset))
-         (nitem  (plist-get state :nitem)))
-    (with-temp-buffer
-      (let* ((command (hackernews--mm-command))
-             (status  (apply #'call-process
-                             (car command) nil t nil
-                             (append (cdr command)
-                                     (mapcar #'hackernews--item-url
-                                             (substring
-                                              (plist-get state :ids)
-                                              offset (+ offset nitem)))))))
-        (unless (eq status 0)
-          (hackernews--error "Error retrieving items: %s" status)))
-      (goto-char (point-min))
-      (dotimes (i nitem)
-        (hackernews--store-item (hackernews--parse-json) i buffer))))
-  (hackernews--maybe-display buffer))
-
-(defalias 'hackernews-mm-sync2-ids #'hackernews-mm-sync-ids)
-
-(defun hackernews-mm-sync2-items (buffer)
-  ""
-  (let* ((state  (hackernews-state buffer))
          (ids    (plist-get state :ids))
          (offset (plist-get state :offset)))
     (dotimes (i (plist-get state :nitem))
@@ -877,6 +919,19 @@ This is a convenience wrapper which passes CALLBACK and ARGS to
                                (hackernews--item-url (aref ids (+ offset i))))
                               i buffer))
     (hackernews--maybe-display buffer)))
+
+;; `mm-syncs'
+
+(defun hackernews-mm-syncs-items (buffer)
+  ""
+  (let* ((state (hackernews-state buffer))
+         (from  (plist-get state :offset))
+         (to    (+ from (plist-get state :nitem))))
+    (apply #'hackernews--mm-store-items
+           (list :buffer buffer :indices (number-sequence from (1- to)))
+           (apply #'hackernews--mm-reads
+                  (mapcar #'hackernews--item-url
+                          (substring (plist-get state :ids) from to))))))
 
 ;;;; Feeds
 
