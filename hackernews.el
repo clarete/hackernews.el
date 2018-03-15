@@ -565,19 +565,20 @@ their respective URLs."
 (defun hackernews--maybe-done (state)
   ""
   (when (<= (plist-get state :nitem) 0)
-    (plist-put state :offset (+ (plist-get state :offset)
-                                (length (plist-get state :items))))
     (let ((journo (plist-get state :journo)))
       (when journo (progress-reporter-done journo)))
+    (plist-put state :offset (+ (plist-get state :offset)
+                                (length (plist-get state :items))))
     (hackernews--render state)))
 
 (defun hackernews--store-item (item index state)
   ""
   (let ((nitem  (1- (plist-get state :nitem)))
         (journo (plist-get state :journo)))
+    (when journo (progress-reporter-update journo (- nitem)))
     (aset (plist-get state :items) index item)
-    (plist-put state :nitem nitem)
-    (when journo (progress-reporter-update journo (- nitem)))))
+    (plist-put state :nitem nitem))
+  (hackernews--maybe-done state))
 
 (defun hackernews--dispatch (job state)
   "[REWORD] Partition BUFFER's items evenly across a vector.
@@ -586,6 +587,7 @@ The length of the resultant vector is between 1 and
 a list of cells (INDEX . URL), where URL specifies a Hacker News
 item to be fetched and INDEX determines its ordering in BUFFER's
 items vector."
+  (hackernews--maybe-done state)
   (let* ((ids    (plist-get state :ids))
          (offset (plist-get state :offset))
          (nitem  (plist-get state :nitem))
@@ -612,8 +614,8 @@ items vector."
                                 (format "Retrieving %d %s..." nitem
                                         (hackernews--feed-name
                                          (plist-get state :feed)))
-                                (- nitem) 0)))
-    (funcall (plist-get (plist-get state :backend) :items) state)))
+                                (- nitem) 0))))
+  (funcall (plist-get (plist-get state :backend) :items) state))
 
 (defun hackernews--store-ids (ids state)
   "Store IDS vector in STATE and start item retrieval.
@@ -727,17 +729,11 @@ This is a convenience wrapper which passes CALLBACK and ARGS to
                                   #'hackernews--store-ids
                                   state))
 
-(defun hackernews--url-queue-item (item index state)
-  ""
-  (hackernews--store-item item index state)
-  (hackernews--maybe-done state))
-
 (defun hackernews--url-queue-job (tasks state)
   ""
   (dolist (task tasks)
-    (hackernews--url-queue-retrieve (cdr task) #'hackernews--url-queue-item
-                                    (car task) state))
-  (hackernews--maybe-done state))
+    (hackernews--url-queue-retrieve (cdr task) #'hackernews--store-item
+                                    (car task) state)))
 
 (defun hackernews-url-queue-items (state)
   "Asynchronously retrieve and store items in STATE."
@@ -754,14 +750,12 @@ This is a convenience wrapper which passes CALLBACK and ARGS to
 (defun hackernews--url-chain-item (item index tasks state)
   ""
   (hackernews--store-item item index state)
-  (hackernews--url-chain-job tasks state))
+  (when tasks (hackernews--url-chain-job tasks state)))
 
 (defun hackernews--url-chain-job (tasks state)
   ""
-  (if tasks
-      (hackernews--url-retrieve (cdar tasks) #'hackernews--url-chain-item
-                                (caar tasks) (cdr tasks) state)
-    (hackernews--maybe-done state)))
+  (hackernews--url-retrieve (cdar tasks) #'hackernews--url-chain-item
+                            (caar tasks) (cdr tasks) state))
 
 (defun hackernews-url-chain-items (state)
   "Asynchronously retrieve and store items in STATE."
@@ -778,8 +772,9 @@ This is a convenience wrapper which passes CALLBACK and ARGS to
 (defun hackernews--url-sync-job (tasks state)
   ""
   (dolist (task tasks)
-    (hackernews--store-item (hackernews--url-read (cdr task)) (car task) state))
-  (hackernews--maybe-done state))
+    (hackernews--store-item (hackernews--url-read (cdr task))
+                            (car task)
+                            state)))
 
 (defun hackernews-url-sync-items (state)
   "Synchronously retrieve and store items in STATE."
@@ -857,18 +852,17 @@ whose contents are first retrieved synchronously."
 
 (defun hackernews--mm-async-item (plist item)
   ""
-  (let ((state (plist-get plist :state)))
+  (let ((state (plist-get plist :state))
+        (tasks (plist-get plist :tasks)))
     (hackernews--store-item item (plist-get plist :index) state)
-    (hackernews--mm-async-job (plist-get plist :tasks) state)))
+    (when tasks (hackernews--mm-async-job tasks state))))
 
 (defun hackernews--mm-async-job (tasks state)
   ""
-  (if tasks
-      (hackernews--mm-retrieve #'hackernews--mm-async-item
-                               (list :index (caar tasks) :tasks (cdr tasks)
-                                     :state state)
-                               (cdar tasks))
-    (hackernews--maybe-done state)))
+  (hackernews--mm-retrieve #'hackernews--mm-async-item
+                           (list :index (caar tasks) :tasks (cdr tasks)
+                                 :state state)
+                           (cdar tasks)))
 
 (defun hackernews-mm-async-items (state)
   "Asynchronously retrieve and store items in STATE."
@@ -880,17 +874,14 @@ whose contents are first retrieved synchronously."
   ""
   (let ((state (plist-get plist :state)))
     (dolist (index (plist-get plist :indices))
-      (hackernews--store-item (pop items) index state))
-    (hackernews--maybe-done state)))
+      (hackernews--store-item (pop items) index state))))
 
 (defun hackernews--mm-asyncs-job (tasks state)
   ""
-  (if tasks
-      (apply #'hackernews--mm-retrieve
-             #'hackernews--mm-store-items
-             (list :state state :indices (mapcar #'car tasks))
-             (mapcar #'cdr tasks))
-    (hackernews--maybe-done state)))
+  (apply #'hackernews--mm-retrieve
+         #'hackernews--mm-store-items
+         (list :state state :indices (mapcar #'car tasks))
+         (mapcar #'cdr tasks)))
 
 (defun hackernews-mm-asyncs-items (state)
   "Asynchronously retrieve and store items in STATE."
@@ -907,8 +898,7 @@ whose contents are first retrieved synchronously."
 (defun hackernews--mm-sync-job (tasks state)
   ""
   (dolist (task tasks)
-    (hackernews--store-item (hackernews--mm-read (cdr task)) (car task) state))
-  (hackernews--maybe-done state))
+    (hackernews--store-item (hackernews--mm-read (cdr task)) (car task) state)))
 
 (defun hackernews-mm-sync-items (state)
   "Synchronously retrieve and store items in STATE."
