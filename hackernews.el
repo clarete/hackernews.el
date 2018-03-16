@@ -415,6 +415,21 @@ This is intended as an :annotation-function in
   "Read JSON object from current buffer starting at point.
 Objects are decoded as alists and arrays as vectors.")
 
+(defun hackernews--reads (writer &rest args)
+  ""
+  (with-temp-buffer
+    (apply writer args)
+    (goto-char (point-min))
+    (let (objects)
+      (while (progn (push (hackernews--parse-json) objects)
+                    (not (eobp))))
+      (nreverse objects))))
+
+;; TODO: Remove?
+(defun hackernews--read (writer &rest args)
+  "Like `hackernews--reads', but return the first object read."
+  (car (apply #'hackernews--reads writer args)))
+
 (defalias 'hackernews--signum
   (if (and (require 'cl-lib nil t)
            (fboundp 'cl-signum))
@@ -666,7 +681,7 @@ displayed in the corresponding hackernews buffer."
 
 ;; `url'
 
-(defalias 'hackernews--url-insert
+(defalias 'hackernews--url-insert-buffer
   (if (fboundp 'url-insert-buffer-contents)
       #'url-insert-buffer-contents
     (lambda (buffer url &optional _visit _beg _end _replace)
@@ -680,19 +695,13 @@ displayed in the corresponding hackernews buffer."
 
 \(fn BUFFER URL)")
 
-(defun hackernews--url-read (url &optional buffer)
-  "Read contents of URL as JSON.
-The contents of URL are either decoded and read from a URL BUFFER
-when provided, or first retrieved synchronously."
-  (with-temp-buffer
-    (if buffer
-        (hackernews--url-insert buffer url)
-      (let ((url-show-status (unless hackernews-suppress-url-status
-                               url-show-status)))
-        (url-insert-file-contents url)))
-    (hackernews--parse-json)))
+(defun hackernews--url-insert-file (url)
+  "Like `url-insert-file-contents', but optionally silent."
+  (let ((url-show-status (unless hackernews-suppress-url-status
+                           url-show-status)))
+    (url-insert-file-contents url)))
 
-(defun hackernews--url-read-callback (status url callback &rest args)
+(defun hackernews--url-callback (status url callback &rest args)
   "Callback for `url-retrieve'.
 Performs error handling on the STATUS plist before
 returning (apply CALLBACK JSON ARGS), where JSON is parsed from
@@ -702,16 +711,18 @@ the contents of URL."
     (when err
       (kill-buffer buf)
       (hackernews--error "Error retrieving %s: %s" url (cdr err)))
-    (apply callback (hackernews--url-read url buf) args)))
+    (apply callback
+           (hackernews--read #'hackernews--url-insert-buffer buf url)
+           args)))
 
 (defun hackernews--url-retrieve (url callback &rest args)
   "Retrieve URL asynchronously with `url-retrieve'.
 This is a convenience wrapper which passes CALLBACK and ARGS to
-`hackernews--url-read-callback' after retrieval."
+`hackernews--url-callback' after retrieval."
   (let ((url-show-status (unless hackernews-suppress-url-status
                            url-show-status)))
     (url-retrieve url
-                  #'hackernews--url-read-callback
+                  #'hackernews--url-callback
                   (cons url (cons callback args)))))
 
 ;; `url-queue'
@@ -719,7 +730,7 @@ This is a convenience wrapper which passes CALLBACK and ARGS to
 (defun hackernews--url-queue-retrieve (url callback &rest args)
   "Like `hackernews--url-retrieve', but using `url-queue'."
   (url-queue-retrieve url
-                      #'hackernews--url-read-callback
+                      #'hackernews--url-callback
                       (cons url (cons callback args))
                       hackernews-suppress-url-status))
 
@@ -765,14 +776,16 @@ This is a convenience wrapper which passes CALLBACK and ARGS to
 
 (defun hackernews-url-sync-ids (state)
   "Synchronously retrieve and store IDs vector in STATE."
-  (hackernews--store-ids (hackernews--url-read
+  (hackernews--store-ids (hackernews--read
+                          #'hackernews--url-insert-file
                           (hackernews--feed-url (plist-get state :feed)))
                          state))
 
 (defun hackernews--url-sync-job (tasks state)
   ""
   (dolist (task tasks)
-    (hackernews--store-item (hackernews--url-read (cdr task))
+    (hackernews--store-item (hackernews--read #'hackernews--url-insert-file
+                                              (cdr task))
                             (car task)
                             state)))
 
@@ -788,31 +801,14 @@ This is a convenience wrapper which passes CALLBACK and ARGS to
       (cdr (assq mm-url-program mm-url-predefined-programs))
     (cons mm-url-program mm-url-arguments)))
 
-(defun hackernews--mm-reads (&rest args)
-  "Read contents of ARGS as a list of JSON objects.
-ARGS may entirely comprise either buffer objects, whose contents
-are read directly and which are subsequently killed, or URLs,
-whose contents are first retrieved synchronously."
-  (with-temp-buffer
-    (if (bufferp (car args))
-        (dolist (buffer args)
-          (insert-buffer-substring buffer)
-          (kill-buffer buffer))
-      (let* ((command (hackernews--mm-command))
-             (status  (apply #'call-process (car command) nil t nil
-                             (append (cdr command) args))))
-        (unless (eq status 0)
-          (hackernews--error "Program `%s' returned exit status: %s"
-                             (car command) status))))
-    (goto-char (point-min))
-    (let (objects)
-      (while (progn (push (hackernews--parse-json) objects)
-                    (not (eobp))))
-      (nreverse objects))))
-
-(defun hackernews--mm-read (arg)
-  "Like `hackernews--mm-reads', but acting on single ARG."
-  (car (hackernews--mm-reads arg)))
+(defun hackernews--mm-insert (&rest urls)
+  "Synchronously insert contents of URLS before point."
+  (let* ((command (hackernews--mm-command))
+         (status  (apply #'call-process (car command) nil t nil
+                         (append (cdr command) urls))))
+    (unless (eq status 0)
+      (hackernews--error "Program `%s' returned exit status: %s"
+                         (car command) status))))
 
 (defun hackernews--mm-sentinel (callback process msg)
   ""
@@ -825,7 +821,8 @@ whose contents are first retrieved synchronously."
              (hackernews--error "Program `%s' process buffer killed" program))
          (apply callback
                 (process-plist process)
-                (hackernews--mm-reads buffer)))))
+                (prog1 (hackernews--reads #'insert-buffer-substring buffer)
+                  (kill-buffer buffer))))))
 
 (defun hackernews--mm-retrieve (callback plist &rest urls)
   ""
@@ -891,14 +888,18 @@ whose contents are first retrieved synchronously."
 
 (defun hackernews-mm-sync-ids (state)
   "Synchronously retrieve and store IDs vector in STATE."
-  (hackernews--store-ids (hackernews--mm-read
+  (hackernews--store-ids (hackernews--read
+                          #'hackernews--mm-insert
                           (hackernews--feed-url (plist-get state :feed)))
                          state))
 
 (defun hackernews--mm-sync-job (tasks state)
   ""
   (dolist (task tasks)
-    (hackernews--store-item (hackernews--mm-read (cdr task)) (car task) state)))
+    (hackernews--store-item (hackernews--read #'hackernews--mm-insert
+                                              (cdr task))
+                            (car task)
+                            state)))
 
 (defun hackernews-mm-sync-items (state)
   "Synchronously retrieve and store items in STATE."
@@ -910,7 +911,9 @@ whose contents are first retrieved synchronously."
   ""
   (apply #'hackernews--mm-store-items
          (list :state state :indices (mapcar #'car tasks))
-         (apply #'hackernews--mm-reads (mapcar #'cdr tasks))))
+         (apply #'hackernews--reads
+                #'hackernews--mm-insert
+                (mapcar #'cdr tasks))))
 
 (defun hackernews-mm-syncs-items (state)
   "Synchronously retrieve and store items in STATE."
