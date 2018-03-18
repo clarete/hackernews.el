@@ -378,11 +378,11 @@ asynchronous, so as to free up the echo area for other purposes."
   "Return Hacker News website URL for item with ID."
   (format hackernews-site-item-format id))
 
-(defun hackernews--format-api-url (fmt &rest args)
+(defun hackernews--format-api-url (format &rest args)
   "Construct a Hacker News API URL.
-The result of passing FMT and ARGS to `format' is substituted in
-`hackernews-api-format'."
-  (format hackernews-api-format (apply #'format fmt args)))
+The result of passing FORMAT and ARGS to `format' is substituted
+in `hackernews-api-format'."
+  (format hackernews-api-format (apply #'format format args)))
 
 (defun hackernews--item-url (id)
   "Return Hacker News API URL for item with ID."
@@ -586,14 +586,19 @@ their respective URLs."
                                 (length (plist-get state :items))))
     (hackernews--render state)))
 
-(defun hackernews--store-item (item index state)
-  ""
-  (let ((nitem  (1- (plist-get state :nitem)))
-        (journo (plist-get state :journo)))
+(defun hackernews--store-items (plist &rest items)
+  "Store ITEMS in PLIST's :state.
+This function is intended as a generic asynchronous callback."
+  (let* ((state   (plist-get plist :state))
+         (journo  (plist-get state :journo))
+         (itemvec (plist-get state :items))
+         (nitem   (- (plist-get state :nitem)
+                     (length items))))
+    (dolist (index (plist-get plist :indices))
+      (aset itemvec index (pop items)))
     (when journo (progress-reporter-update journo (- nitem)))
-    (aset (plist-get state :items) index item)
-    (plist-put state :nitem nitem))
-  (hackernews--maybe-done state))
+    (plist-put state :nitem nitem)
+    (hackernews--maybe-done state)))
 
 (defun hackernews--dispatch (job state)
   "[REWORD] Partition BUFFER's items evenly across a vector.
@@ -632,12 +637,12 @@ items vector."
                                 (- nitem) 0))))
   (funcall (plist-get (plist-get state :backend) :items) state))
 
-(defun hackernews--store-ids (ids state)
-  "Store IDS vector in STATE and start item retrieval.
-This function is suitable as a callback for
-`hackernews--url-retrieve'."
-  (plist-put state :ids ids)
-  (hackernews--retrieve-items state))
+(defun hackernews--store-ids (plist ids)
+  "Store IDS vector in PLIST's :state and start item retrieval.
+This function is intended as a generic asynchronous callback."
+  (let ((state (plist-get plist :state)))
+    (plist-put state :ids ids)
+    (hackernews--retrieve-items state)))
 
 (defun hackernews--load-stories (feed n &optional append)
   "Retrieve and render at most N items from FEED.
@@ -695,56 +700,41 @@ displayed in the corresponding hackernews buffer."
 
 \(fn BUFFER URL)")
 
-(defun hackernews--url-insert-file (url)
-  "Like `url-insert-file-contents', but optionally silent."
-  (let ((url-show-status (unless hackernews-suppress-url-status
-                           url-show-status)))
-    (url-insert-file-contents url)))
-
-(defun hackernews--url-callback (status url callback &rest args)
-  "Callback for `url-retrieve'.
+(defun hackernews--url-callback (status &rest plist)
+  "[REWORD] Callback for `url-retrieve'.
 Performs error handling on the STATUS plist before
 returning (apply CALLBACK JSON ARGS), where JSON is parsed from
 the contents of URL."
   (let ((buf (current-buffer))
+        (url (url-recreate-url url-current-object))
         (err (plist-get status :error)))
     (when err
       (kill-buffer buf)
       (hackernews--error "Error retrieving %s: %s" url (cdr err)))
-    (apply callback
-           (hackernews--read #'hackernews--url-insert-buffer buf url)
-           args)))
-
-(defun hackernews--url-retrieve (url callback &rest args)
-  "Retrieve URL asynchronously with `url-retrieve'.
-This is a convenience wrapper which passes CALLBACK and ARGS to
-`hackernews--url-callback' after retrieval."
-  (let ((url-show-status (unless hackernews-suppress-url-status
-                           url-show-status)))
-    (url-retrieve url
-                  #'hackernews--url-callback
-                  (cons url (cons callback args)))))
+    (funcall (plist-get plist :callback)
+             plist
+             (hackernews--read #'hackernews--url-insert-buffer buf url))))
 
 ;; `url-queue'
 
-(defun hackernews--url-queue-retrieve (url callback &rest args)
+(defun hackernews--url-queue-retrieve (url &rest plist)
   "Like `hackernews--url-retrieve', but using `url-queue'."
-  (url-queue-retrieve url
-                      #'hackernews--url-callback
-                      (cons url (cons callback args))
+  (url-queue-retrieve url #'hackernews--url-callback plist
                       hackernews-suppress-url-status))
 
 (defun hackernews-url-queue-ids (state)
   "Asynchronously retrieve and store IDs vector in STATE."
   (hackernews--url-queue-retrieve (hackernews--feed-url (plist-get state :feed))
-                                  #'hackernews--store-ids
-                                  state))
+                                  :callback #'hackernews--store-ids
+                                  :state    state))
 
 (defun hackernews--url-queue-job (tasks state)
   ""
   (dolist (task tasks)
-    (hackernews--url-queue-retrieve (cdr task) #'hackernews--store-item
-                                    (car task) state)))
+    (hackernews--url-queue-retrieve (cdr task)
+                                    :callback #'hackernews--store-items
+                                    :indices  (list (car task))
+                                    :state    state)))
 
 (defun hackernews-url-queue-items (state)
   "Asynchronously retrieve and store items in STATE."
@@ -752,11 +742,18 @@ This is a convenience wrapper which passes CALLBACK and ARGS to
 
 ;; `url-chain'
 
+(defun hackernews--url-retrieve (url &rest plist)
+  "[REWORD] Retrieve URL asynchronously with `url-retrieve'.
+This is a convenience wrapper which passes CALLBACK and ARGS to
+`hackernews--url-callback' after retrieval."
+  (let ((url-show-status (unless hackernews-suppress-url-status
+                           url-show-status)))
+    (url-retrieve url #'hackernews--url-callback plist)))
+
 (defun hackernews-url-chain-ids (state)
   "Asynchronously retrieve and store IDs vector in STATE."
   (hackernews--url-retrieve (hackernews--feed-url (plist-get state :feed))
-                            #'hackernews--store-ids
-                            state))
+                            :callback #'hackernews--store-ids :state state))
 
 (defun hackernews--url-chain-item (item index tasks state)
   ""
@@ -773,6 +770,12 @@ This is a convenience wrapper which passes CALLBACK and ARGS to
   (hackernews--dispatch #'hackernews--url-chain-job state))
 
 ;; `url-sync'
+
+(defun hackernews--url-insert-file (url)
+  "Like `url-insert-file-contents', but optionally silent."
+  (let ((url-show-status (unless hackernews-suppress-url-status
+                           url-show-status)))
+    (url-insert-file-contents url)))
 
 (defun hackernews-url-sync-ids (state)
   "Synchronously retrieve and store IDs vector in STATE."
@@ -810,41 +813,35 @@ This is a convenience wrapper which passes CALLBACK and ARGS to
       (hackernews--error "Program `%s' returned exit status: %s"
                          (car command) status))))
 
-(defun hackernews--mm-sentinel (callback process msg)
+(defun hackernews--mm-sentinel (process msg)
   ""
-  (let ((buffer  (process-buffer process))
-        (program (car (process-command process))))
-    (and (eq (process-status process) 'exit)
-         (or (zerop (process-exit-status process))
-             (hackernews--error "Program `%s' %s" program (substring msg 0 -1)))
-         (or (buffer-live-p buffer)
-             (hackernews--error "Program `%s' process buffer killed" program))
-         (apply callback
-                (process-plist process)
-                (prog1 (hackernews--reads #'insert-buffer-substring buffer)
-                  (kill-buffer buffer))))))
+  (when (eq (process-status process) 'exit)
+    (let ((buffer  (process-buffer process))
+          (program (car (process-command process))))
+      (unless (zerop (process-exit-status process))
+        (hackernews--error "Program `%s' %s" program (substring msg 0 -1)))
+      (unless (buffer-live-p buffer)
+        (hackernews--error "Program `%s' process buffer killed" program))
+      (apply (process-get process :callback)
+             (process-plist process)
+             (prog1 (hackernews--reads #'insert-buffer-substring buffer)
+               (kill-buffer buffer))))))
 
-(defun hackernews--mm-retrieve (callback plist &rest urls)
+(defun hackernews--mm-retrieve (plist &rest urls)
   ""
   (let* (process-connection-type
          (name    " *hackernews*")
          (process (apply #'start-process name (generate-new-buffer-name name)
                          (append (hackernews--mm-command) urls))))
+    (set-process-sentinel process #'hackernews--mm-sentinel)
     (set-process-plist    process plist)
-    (set-process-sentinel process
-                          (apply-partially #'hackernews--mm-sentinel callback))
     process))
 
 ;; `mm-async'
 
-(defun hackernews--mm-store-ids (plist ids)
-  ""
-  (hackernews--store-ids ids (plist-get plist :state)))
-
 (defun hackernews-mm-async-ids (state)
   "Asynchronously retrieve and store IDs vector in STATE."
-  (hackernews--mm-retrieve #'hackernews--mm-store-ids
-                           (list :state state)
+  (hackernews--mm-retrieve (list :callback #'hackernews--store-ids :state state)
                            (hackernews--feed-url (plist-get state :feed))))
 
 (defun hackernews--mm-async-item (plist item)
@@ -856,9 +853,10 @@ This is a convenience wrapper which passes CALLBACK and ARGS to
 
 (defun hackernews--mm-async-job (tasks state)
   ""
-  (hackernews--mm-retrieve #'hackernews--mm-async-item
-                           (list :index (caar tasks) :tasks (cdr tasks)
-                                 :state state)
+  (hackernews--mm-retrieve (list :callback #'hackernews--mm-async-item
+                                 :index    (caar tasks)
+                                 :tasks    (cdr tasks)
+                                 :state    state)
                            (cdar tasks)))
 
 (defun hackernews-mm-async-items (state)
@@ -876,8 +874,9 @@ This is a convenience wrapper which passes CALLBACK and ARGS to
 (defun hackernews--mm-asyncs-job (tasks state)
   ""
   (apply #'hackernews--mm-retrieve
-         #'hackernews--mm-store-items
-         (list :state state :indices (mapcar #'car tasks))
+         (list :callback #'hackernews--mm-store-items
+               :indices  (mapcar #'car tasks)
+               :state    state)
          (mapcar #'cdr tasks)))
 
 (defun hackernews-mm-asyncs-items (state)
