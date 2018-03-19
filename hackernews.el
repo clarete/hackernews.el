@@ -91,7 +91,8 @@
     ("ask"  . "ask stories")
     ("show" . "show stories")
     ("job"  . "job stories"))
-  "Map feed types as strings to their display names.")
+  "Alist mapping feed types as strings to their display names.
+Each key is a suitable value for `hackernews-default-feed'.")
 (put 'hackernews-feed-names 'risky-local-variable t)
 
 (defcustom hackernews-default-feed "top"
@@ -162,10 +163,11 @@ The position of point will not have been affected by the render."
   :type 'hook)
 
 (defcustom hackernews-finalize-hook ()
-  "Hook called as final step of loading any new items.
-The position of point may have been adjusted after the render,
-buffer-local feed state will have been updated and the hackernews
-buffer will be current and displayed in the selected window."
+  "Hook called as final step of rendering any new items.
+The hackernews buffer will be current and displayed in the
+selected window, its local feed state will have been updated, and
+its value of point may have been adjusted, subject to
+`hackernews-preserve-point'."
   :package-version '(hackernews . "0.4.0")
   :group 'hackernews
   :type 'hook)
@@ -209,8 +211,8 @@ Like `url-chain', but with sentinel, not callback, chains.")
      :items hackernews-mm-asyncs-items
      :doc   "\
 Asynchronous retrieval using the `mm-url' library.
-This backend is significantly faster than `mm-async' by passing
-multiple URLs to each subprocess, thus spawning fewer
+This backend can be significantly faster than `mm-async' by
+passing multiple URLs to each subprocess, thus spawning fewer
 overall (the trailing 's' in `mm-asyncs' alludes to both
 plurality and speed).  It is not enabled by default because it
 renders the progress reporter far less, if at all, effective, and
@@ -228,11 +230,19 @@ Synchronous retrieval using the `mm-url' library.")
 Synchronous retrieval using the `mm-url' library.
 This backend is to `mm-sync' what `mm-asyncs' (which see) is to
 `mm-async'."))
-  "Map retrieval backends to their property lists.
-The following properties are currently understood:
-:ids   - Function for retrieving the IDs of a given buffer.
-:items - Function for retrieving the items of a given buffer.
-:doc   - Backend description.")
+  "Alist mapping retrieval backends to their property list.
+Each key is a suitable value for `hackernews-backend'.
+
+The following properties are currently expected:
+:ids   - Function for retrieving the IDs of a given session.
+:items - Function for retrieving the items of a given session.
+:doc   - Backend description.
+
+A \"session\" in this context refers to a property list passed
+around during retrieval.  Some standard properties include:
+:buffer - Buffer displaying items and holding `hackernews-state'.
+:items  - Vector holding items being retrieved.
+:nitem  - Number of items left to retrieve.")
 
 (defcustom hackernews-backend (if (featurep 'url-queue)
                                   'url-queue
@@ -279,10 +289,9 @@ When `hackernews-backend' is set to one of the default `url-*'
 backends, this user option determines whether to suppress
 messages controlled by `url-show-status' and also acts as the
 SILENT argument to `url' retrieval functions such as
-`url-retrieve'.  The corresponding messages are suppressed by
-default so that the hackernews progress reporter is not
-interrupted, as well as for general noise reduction in the echo
-area."
+`url-retrieve'.  These messages are suppressed by default so that
+the hackernews progress reporter is not interrupted, as well as
+for general noise reduction in the echo area."
   :package-version '(hackernews . "0.4.0")
   :group 'hackernews
   :type 'boolean)
@@ -309,18 +318,11 @@ asynchronous, so as to free up the echo area for other purposes."
   "Format of Hacker News website item URLs.")
 
 (defvar hackernews-state ()
-  "Plist capturing state of a Hacker News feed.
-:feed    - Type of endpoint feed; see `hackernews-feed-names'.
-:buffer  - Buffer displaying items and holding state.
-:backend - Retrieval backend plist; see `hackernews-backends'.
-:journo  - Progress reporter.
-:ids     - Vector of item IDs last read from this feed.
-:offset  - Number of items currently displayed.
-           This is an index into :ids.
-:items   - Vector holding items being or last fetched.
-:nitem   - Number of items to be or already fetched.
-           Counts down to zero, and is used to update :journo,
-           during retrieval.")
+  "Plist persisting state of a Hacker News feed buffer.
+:feed   - Type of endpoint feed; see `hackernews-feed-names'.
+:ids    - Vector of item IDs last read from this feed.
+:offset - Number of items currently displayed.
+          This is an index into :ids.")
 (make-variable-buffer-local 'hackernews-state)
 
 (defvar hackernews-feed-history ()
@@ -564,8 +566,8 @@ their respective URLs."
 \\{hackernews-mode-map}"
   :group 'hackernews
   ;; We could initialize `hackernews-state' to nil here and reset
-  ;; `:offset' elsewhere, but initializing to a non-empty plist has
-  ;; the benefit of allowing direct modification by `plist-put'.
+  ;; `:offset' elsewhere, but initializing to a non-empty plist
+  ;; affords destructive `plist-put' operations.
   (setq hackernews-state (list :offset 0))
   (setq truncate-lines t)
   (buffer-disable-undo))

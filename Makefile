@@ -5,7 +5,7 @@ RM      ?= rm -f
 
 help:
 	$(info Available options)
-	$(info - package : Builds a tar package ready to be uploaded to marmalade)
+	$(info - package : Build a tar package ready to be uploaded to Marmalade)
 	$(info - clean   : Clean the build directory)
 
 all: package
