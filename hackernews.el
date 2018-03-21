@@ -184,31 +184,31 @@ See `browse-url-browser-function' for some possible options."
                                     'browse-url-browser-function)))))
 
 (defvar hackernews-backends
-  '((url-queue
-     :ids   hackernews-url-queue-ids
-     :items hackernews-url-queue-items
+  `((url-queue
+     :ids   ,#'hackernews-url-queue-ids
+     :items ,#'hackernews-url-queue-items
      :doc   "\
 Asynchronous retrieval using the `url-queue' library.")
     (url-chain
-     :ids   hackernews-url-chain-ids
-     :items hackernews-url-chain-items
+     :ids   ,#'hackernews-url-chain-ids
+     :items ,#'hackernews-url-chain-items
      :doc   "\
 Asynchronous retrieval using the `url' library.
 Emulates `url-queue' by chaining `url-retrieve' callbacks.")
     (url-sync
-     :ids   hackernews-url-sync-ids
-     :items hackernews-url-sync-items
+     :ids   ,#'hackernews-url-sync-ids
+     :items ,#'hackernews-url-sync-items
      :doc   "\
 Synchronous retrieval using the `url' library.")
     (mm-async
-     :ids   hackernews-mm-async-ids
-     :items hackernews-mm-async-items
+     :ids   ,#'hackernews-mm-async-ids
+     :items ,#'hackernews-mm-async-items
      :doc   "\
 Asynchronous retrieval using the `mm-url' library.
 Like `url-chain', but with sentinel, not callback, chains.")
     (mm-asyncs
-     :ids   hackernews-mm-async-ids
-     :items hackernews-mm-asyncs-items
+     :ids   ,#'hackernews-mm-async-ids
+     :items ,#'hackernews-mm-asyncs-items
      :doc   "\
 Asynchronous retrieval using the `mm-url' library.
 This backend can be significantly faster than `mm-async' by
@@ -219,13 +219,13 @@ renders the progress reporter far less, if at all, effective, and
 some `mm-url-predefined-programs', such as `lynx', do not accept
 multiple URL arguments.")
     (mm-sync
-     :ids   hackernews-mm-sync-ids
-     :items hackernews-mm-sync-items
+     :ids   ,#'hackernews-mm-sync-ids
+     :items ,#'hackernews-mm-sync-items
      :doc   "\
 Synchronous retrieval using the `mm-url' library.")
     (mm-syncs
-     :ids   hackernews-mm-sync-ids
-     :items hackernews-mm-syncs-items
+     :ids   ,#'hackernews-mm-sync-ids
+     :items ,#'hackernews-mm-syncs-items
      :doc   "\
 Synchronous retrieval using the `mm-url' library.
 This backend is to `mm-sync' what `mm-asyncs' (which see) is to
