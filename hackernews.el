@@ -376,16 +376,9 @@ asynchronous, so as to free up the echo area for other purposes."
                          #'format)
                        format args))))
 
-(defun hackernews--feed-name (feed)
-  "Lookup FEED in `hackernews-feed-names'."
-  (cdr (assoc-string feed hackernews-feed-names)))
-
-(defun hackernews--feed-annotation (feed)
-  "Annotate FEED during completion.
-This is intended as an :annotation-function for
-`completion-extra-properties'."
-  (let ((name (hackernews--feed-name feed)))
-    (and name (concat " - " name))))
+(defun hackernews--state (session)
+  "Return SESSION's `hackernews-state'."
+  (buffer-local-value 'hackernews-state (plist-get session :buffer)))
 
 (defun hackernews--comments-url (id)
   "Return Hacker News website URL for item with ID."
@@ -407,9 +400,16 @@ See `hackernews-feed-names' for possible feed names."
   (hackernews--format-api-url "%sstories"
                               (plist-get (hackernews--state session) :feed)))
 
-(defun hackernews--state (session)
-  "Return SESSION's `hackernews-state'."
-  (buffer-local-value 'hackernews-state (plist-get session :buffer)))
+(defun hackernews--feed-name (feed)
+  "Lookup FEED in `hackernews-feed-names'."
+  (cdr (assoc-string feed hackernews-feed-names)))
+
+(defun hackernews--feed-annotation (feed)
+  "Annotate FEED during completion.
+This is intended as an :annotation-function for
+`completion-extra-properties'."
+  (let ((name (hackernews--feed-name feed)))
+    (and name (concat " - " name))))
 
 (defalias 'hackernews--parse-json
   (if (fboundp 'json-parse-buffer)
@@ -596,47 +596,42 @@ Update SESSION's `hackernews-state' accordingly."
                                   (length (plist-get session :items)))))
     (hackernews--render session)))
 
-(defun hackernews--store-items (session &rest items)
-  "Store ITEMS in SESSIONS's :items.
+(defun hackernews--store-items (objects session base &rest chain)
+  "Store JSON OBJECTS as items for SESSION starting at BASE index.
+Call SESSION's :job function on any remaining CHAIN of URLs.
 This function is intended as a generic asynchronous callback."
   (let* ((journo  (plist-get session :journo))
-         (jobid   (plist-get session
-         (taskid  (plist-get session :taskid))
-         (tasks   (aref (plist-get session :tasks) taskid))
-         (itemvec (plist-get session :items))
-         (nitem   (- (plist-get session :nitem)
-                     (length items))))
-    (dolist (item items)
-      (aset itemvec (car (pop tasks)) item))
+         (items   (plist-get session :items))
+         (nobject (length objects))
+         (nitem   (- (plist-get session :nitem) nobject)))
+    (dotimes (i nobject)
+      (aset items (+ base i) (pop objects)))
     (when journo (progress-reporter-update journo (- nitem)))
-    (plist-put session :tasks tasks)
     (plist-put session :nitem nitem)
-    (if tasks
-        (funcall (plist-get session :job) session)
+    (if chain
+        (apply (plist-get session :job) session (+ base nobject) chain)
       (hackernews--maybe-done session))))
 
 (defun hackernews--dispatch (job session)
   "Distribute item retrieval SESSION across multiple JOBs.
-The complete list of items to retrieve is partitioned into at
-most `hackernews-async-processes' sublists (read: tasks) with
-elements of the form (INDEX . URL), where URL identifies a Hacker
-News item and INDEX determines its ordering in SESSION's :items.
-Function JOB is called with SESSION once for each tasks sublist."
-  (let* ((state  (hackernews--state session))
+Partition URLS of items to be retrieved into at most
+`hackernews-async-processes' sublists.  For each such sublist
+starting at index BASE call (apply JOB SESSION BASE URLS)."
+  (plist-put session :job job)
+  (let* ((nitem  (plist-get session :nitem))
+         (njob   (max 1 (min nitem hackernews-async-processes)))
+         (nbig   (% nitem njob))
+         (small  (/ nitem njob))
+         (big    (1+ small))
+         (state  (hackernews--state session))
          (ids    (plist-get state :ids))
          (offset (plist-get state :offset))
-         (nitem  (plist-get session :nitem))
-         (njob   (max 1 (min nitem hackernews-async-processes)))
-         (jobs   (make-vector njob ())))
-    (dotimes (i nitem)
-      (let ((j (% i njob)))
-        (aset jobs j
-              (cons (cons i (hackernews--item-url (aref ids (+ offset i))))
-                    (aref jobs j)))))
-    (plist-put session :job job)
-    (mapc (lambda (tasks)
-            (funcall job (plist-put session :tasks tasks)))
-          jobs)))
+         (from   offset))
+    (dotimes (j njob)
+      (let ((to (+ from (if (< j nbig) big small))))
+        (apply job session (- from offset)
+               (mapcar #'hackernews--item-url (substring ids from to)))
+        (setq from to)))))
 
 (defun hackernews--retrieve-items (session)
   "Prepare SESSION for and begin item retrieval."
@@ -652,12 +647,12 @@ Function JOB is called with SESSION once for each tasks sublist."
                                           (hackernews--feed-name
                                            (plist-get state :feed)))
                                   (- nitem) 0))))
-  (funcall (plist-get (plist-get session :backend) :items) session))
+  (funcall (plist-get session :backend) session))
 
-(defun hackernews--store-ids (session ids)
-  "Persist IDS vector for SESSION and start item retrieval.
+(defun hackernews--store-ids (objects session)
+  "Store JSON OBJECTS as IDs vector for SESSION.
 This function is intended as a generic asynchronous callback."
-  (plist-put (hackernews--state session) :ids ids)
+  (plist-put (hackernews--state session) :ids (car objects))
   (hackernews--retrieve-items session))
 
 (defun hackernews--load-stories (feed n &optional append)
@@ -677,7 +672,8 @@ displayed in the corresponding hackernews buffer."
          (buffer  (get-buffer-create (format "*hackernews %s*" name)))
          (backend (cdr (assq hackernews-backend hackernews-backends)))
          (session (list :buffer  buffer
-                        :backend backend
+                        :backend (plist-get backend :items)
+                        :journo  hackernews-report-progress
                         :nitem   (if n
                                      (prefix-numeric-value n)
                                    hackernews-items-per-page))))
@@ -712,43 +708,41 @@ displayed in the corresponding hackernews buffer."
 
 \(fn BUFFER URL)")
 
-(defun hackernews--url-callback (status session)
+(defun hackernews--url-callback (status callback &rest args)
   "Callback for `url-retrieve'.
-Perform error handling on the STATUS plist before passing the
-JSON contents of the current buffer to SESSION's :callback
-function as (funcall CALLBACK SESSION JSON)."
+Check STATUS plist for errors before passing list of JSON objects
+parsed from current buffer to (apply CALLBACK JSON ARGS)."
   (let ((buf (current-buffer))
         (url (url-recreate-url url-current-object))
         (err (plist-get status :error)))
     (when err
       (kill-buffer buf)
       (hackernews--error "Error retrieving %s: %s" url (cdr err)))
-    (funcall (plist-get session :callback)
-             session
-             (hackernews--read #'hackernews--url-insert-buffer buf url))))
+    (apply callback
+           (hackernews--reads #'hackernews--url-insert-buffer buf url)
+           args)))
 
 ;; `url-queue'
 
-;; TODO: Extract URL from :tasks rather than explicit argument?
-(defun hackernews--url-queue-retrieve (url session)
+(defun hackernews--url-queue-retrieve (url &rest args)
   "Retrieve URL asynchronously via `url-queue-retrieve'.
-Pass SESSION to `hackernews--url-callback' after retrieval."
-  (url-queue-retrieve url #'hackernews--url-callback (list session)
+Pass ARGS to `hackernews--url-callback' after retrieval."
+  (url-queue-retrieve url #'hackernews--url-callback args
                       hackernews-suppress-url-status))
 
 (defun hackernews-url-queue-ids (session)
   "Asynchronously retrieve and persist SESSION's IDs vector."
   (hackernews--url-queue-retrieve (hackernews--feed-url session)
-                                  (plist-put session :callback
-                                             #'hackernews--store-ids)))
+                                  #'hackernews--store-ids
+                                  session))
 
-(defun hackernews--url-queue-job (session)
-  "Asynchronously execute item retrieval tasks for SESSION.
+(defun hackernews--url-queue-job (session base &rest urls)
+  "Asynchronously retrieve item URLS for SESSION.
+Store items retrieved in :items vector starting at index BASE.
 This function is intended as a job for `hackernews--dispatch'."
-  (plist-put session :callback #'hackernews--store-items)
-  (dolist (task (plist-get session :tasks))
-    (hackernews--url-queue-retrieve (cdr task)
-                                    (plist-put session :tasks (list task)))))
+  (dolist (url urls)
+    (hackernews--url-queue-retrieve url #'hackernews--store-items session base)
+    (setq base (1+ base))))
 
 (defun hackernews-url-queue-items (session)
   "Asynchronously retrieve and persist SESSION's items."
