@@ -596,9 +596,9 @@ Update SESSION's `hackernews-state' accordingly."
                                   (length (plist-get session :items)))))
     (hackernews--render session)))
 
-(defun hackernews--store-items (objects session base &rest chain)
+(defun hackernews--store-items (objects session base &rest urls)
   "Store JSON OBJECTS as items for SESSION starting at BASE index.
-Call SESSION's :job function on any remaining CHAIN of URLs.
+Call SESSION's :job function on any remaining queue of URLS.
 This function is intended as a generic asynchronous callback."
   (let* ((journo  (plist-get session :journo))
          (items   (plist-get session :items))
@@ -608,9 +608,7 @@ This function is intended as a generic asynchronous callback."
       (aset items (+ base i) (pop objects)))
     (when journo (progress-reporter-update journo (- nitem)))
     (plist-put session :nitem nitem)
-    (if chain
-        (apply (plist-get session :job) session (+ base nobject) chain)
-      (hackernews--maybe-done session))))
+    (apply (plist-get session :job) session (+ base nobject) urls)))
 
 (defun hackernews--dispatch (job session)
   "Distribute item retrieval SESSION across multiple JOBs.
@@ -731,7 +729,7 @@ Pass ARGS to `hackernews--url-callback' after retrieval."
                       hackernews-suppress-url-status))
 
 (defun hackernews-url-queue-ids (session)
-  "Asynchronously retrieve and persist SESSION's IDs vector."
+  "Asynchronously retrieve and store SESSION's IDs vector."
   (hackernews--url-queue-retrieve (hackernews--feed-url session)
                                   #'hackernews--store-ids
                                   session))
@@ -741,42 +739,40 @@ Pass ARGS to `hackernews--url-callback' after retrieval."
 Store items retrieved in :items vector starting at index BASE.
 This function is intended as a job for `hackernews--dispatch'."
   (dolist (url urls)
-    (hackernews--url-queue-retrieve url #'hackernews--store-items session base)
+    (hackernews--url-queue-retrieve url #'hackernews--store-items
+                                    session base)
     (setq base (1+ base))))
 
 (defun hackernews-url-queue-items (session)
-  "Asynchronously retrieve and persist SESSION's items."
+  "Asynchronously retrieve and store SESSION's items."
   (hackernews--dispatch #'hackernews--url-queue-job session))
 
 ;; `url-chain'
 
-(defun hackernews--url-retrieve (url &rest session)
+(defun hackernews--url-retrieve (url &rest args)
   "Retrieve URL asynchronously via `url-retrieve'.
 Like `hackernews--url-queue-retrieve', but using `url-retrieve'."
   (let ((url-show-status (unless hackernews-suppress-url-status
                            url-show-status)))
-    (url-retrieve url #'hackernews--url-callback session)))
+    (url-retrieve url #'hackernews--url-callback args)))
 
 (defun hackernews-url-chain-ids (session)
-  "Asynchronously retrieve and persist SESSION's IDs vector."
-  (apply #'hackernews--url-retrieve (hackernews--feed-url session)
-         :callback #'hackernews--store-ids
-         session))
+  "Asynchronously retrieve and store SESSION's IDs vector."
+  (hackernews--url-retrieve (hackernews--feed-url session)
+                            #'hackernews--store-ids
+                            session))
 
-(defun hackernews--url-chain-item (item index tasks state)
-  ""
-  (hackernews--store-item item index state)
-  (when tasks (hackernews--url-chain-job tasks state)))
+(defun hackernews--url-chain-job (session base url &rest urls)
+  "Asynchronously retrieve item URL for SESSION.
+Wait until URL is retrieved before moving on to URLS.  Otherwise
+this function is like `hackernews--url-queue-job', but backed by
+`hackernews--url-retrieve'."
+  (apply #'hackernews--url-retrieve url
+         #'hackernews--store-items session base urls))
 
-(defun hackernews--url-chain-job (&rest session)
-  "Asynchronously execute item retrieval tasks for SESSION.
-This function is intended as a job for `hackernews--dispatch'."
-  (hackernews--url-retrieve (cdar tasks) #'hackernews--url-chain-item
-                            (caar tasks) (cdr tasks) state))
-
-(defun hackernews-url-chain-items (state)
-  "Asynchronously retrieve and store items in STATE."
-  (hackernews--dispatch #'hackernews--url-chain-job state))
+(defun hackernews-url-chain-items (session)
+  "Asynchronously retrieve and store SESSION's items."
+  (hackernews--dispatch #'hackernews--url-chain-job session))
 
 ;; `url-sync'
 
@@ -786,29 +782,30 @@ This function is intended as a job for `hackernews--dispatch'."
                            url-show-status)))
     (url-insert-file-contents url)))
 
-(defun hackernews-url-sync-ids (state)
-  "Synchronously retrieve and store IDs vector in STATE."
-  (hackernews--store-ids (hackernews--read
-                          #'hackernews--url-insert-file
-                          (hackernews--feed-url (plist-get state :feed)))
-                         state))
-
-(defun hackernews--url-sync-job (tasks state)
+(defun hackernews--url-sync-retrieve (url callback &rest args)
   ""
-  (dolist (task tasks)
-    (hackernews--store-item (hackernews--read #'hackernews--url-insert-file
-                                              (cdr task))
-                            (car task)
-                            state)))
+  (apply callback (hackernews--reads #'hackernews--url-insert-file url) args))
 
-(defun hackernews-url-sync-items (state)
-  "Synchronously retrieve and store items in STATE."
-  (hackernews--dispatch #'hackernews--url-sync-job state))
+(defun hackernews-url-sync-ids (session)
+  "Synchronously retrieve and store SESSION's IDs vector."
+  (hackernews--url-sync-retrieve (hackernews--feed-url session)
+                                 #'hackernews--store-ids
+                                 session))
+
+(defun hackernews--url-sync-job (session base &rest urls)
+  "Synchronously retrieve item URLS for SESSION.
+Otherwise like `hackernews--url-queue-job'."
+  (dolist (url urls)
+    (hackernews--url-sync-retrieve url #'hackernews--store-items session base)))
+
+(defun hackernews-url-sync-items (session)
+  "Synchronously retrieve and store SESSION's items."
+  (hackernews--dispatch #'hackernews--url-sync-job session))
 
 ;; `mm-url'
 
 (defun hackernews--mm-command ()
-  "Return list of `mm-url' external program and its arguments."
+  "Return external `mm-url' command as a list."
   (if (symbolp mm-url-program)
       (cdr (assq mm-url-program mm-url-predefined-programs))
     (cons mm-url-program mm-url-arguments)))
@@ -915,17 +912,15 @@ This function is intended as a job for `hackernews--dispatch'."
 
 ;; `mm-syncs'
 
-(defun hackernews--mm-syncs-job (tasks state)
+(defun hackernews--mm-syncs-job (session base url &rest urls)
   ""
-  (apply #'hackernews--mm-store-items
-         (list :state state :indices (mapcar #'car tasks))
-         (apply #'hackernews--reads
-                #'hackernews--mm-insert
-                (mapcar #'cdr tasks))))
+  (hackernews--store-items (apply #'hackernews--reads
+                                  #'hackernews--mm-insert (cons url urls))
+                           session base))
 
-(defun hackernews-mm-syncs-items (state)
-  "Synchronously retrieve and store items in STATE."
-  (hackernews--dispatch #'hackernews--mm-syncs-job state))
+(defun hackernews-mm-syncs-items (session)
+  "Synchronously retrieve and store SESSION's items."
+  (hackernews--dispatch #'hackernews--mm-syncs-job session))
 
 ;;;; Feeds
 
