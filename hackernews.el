@@ -213,6 +213,9 @@ See `browse-url-browser-function' for some possible options."
 (defvar hackernews-feed-history ()
   "Completion history of hackernews feeds switched to.")
 
+(define-obsolete-variable-alias 'hackernews-map
+  'hackernews-mode-map "0.4.0")
+
 (defvar hackernews-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map "f"             #'hackernews-switch-feed)
@@ -226,9 +229,6 @@ See `browse-url-browser-function' for some possible options."
     (define-key map [S-tab]         #'hackernews-previous-comment)
     map)
   "Keymap used in hackernews buffer.")
-
-(define-obsolete-variable-alias 'hackernews-map
-  'hackernews-mode-map "0.4.0")
 
 (defvar hackernews-button-map
   (let ((map (make-sparse-keymap)))
