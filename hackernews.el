@@ -426,6 +426,35 @@ their respective URLs."
 (define-derived-mode hackernews-mode special-mode "HN"
   "Mode for browsing Hacker News.
 
+Summary of key bindings:
+
+key		binding
+---		-------
+\\<hackernews-button-map>
+\\[push-button]\
+		Open link at point in default (external) browser.
+\\[hackernews-button-browse-internal]\
+		Open link at point in text-based browser within Emacs.
+\\<hackernews-mode-map>
+\\[hackernews-next-item]\
+		Move to next title link.
+\\[hackernews-previous-item]\
+		Move to previous title link.
+\\[hackernews-next-comment]\
+		Move to next comments count link.
+\\[hackernews-previous-comment]\
+		Move to previous comments count link.
+\\[hackernews-load-more-stories]\
+		Load more stories.
+\\[hackernews-reload]\
+		Reload stories.
+\\[hackernews-switch-feed]\
+		Prompt user for a feed to switch to.
+\\[quit-window]\
+		Quit.
+
+Official major mode key bindings:
+
 \\{hackernews-mode-map}"
   :group 'hackernews
   (setq hackernews--feed-state ())
