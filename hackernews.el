@@ -434,7 +434,7 @@ key		binding
 \\[push-button]\
 		Open link at point in default (external) browser.
 \\[hackernews-button-browse-internal]\
-		Open link at point in text-mode browser within Emacs.
+		Open link at point in text-based browser within Emacs.
 \\<hackernews-mode-map>
 \\[hackernews-next-item]\
 		Move to next title link.

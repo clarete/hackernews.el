@@ -37,18 +37,18 @@ with comments.
 
 ### Keymap
 
-| Key              | Description                                 |
-|------------------|---------------------------------------------|
-| <kbd>RET</kbd>   | Open link in default (external) browser     |
-| <kbd>t</kbd>     | Open link in text-mode browser within Emacs |
-| <kbd>n</kbd>     | Move to next title link                     |
-| <kbd>p</kbd>     | Move to previous title link                 |
-| <kbd>TAB</kbd>   | Move to next comments count link            |
-| <kbd>S-TAB</kbd> | Move to previous comments count link        |
-| <kbd>m</kbd>     | Load more stories                           |
-| <kbd>g</kbd>     | Reload stories                              |
-| <kbd>f</kbd>     | Prompt user for a feed to switch to         |
-| <kbd>q</kbd>     | Quit                                        |
+| Key              | Description                                  |
+|------------------|----------------------------------------------|
+| <kbd>RET</kbd>   | Open link in default (external) browser      |
+| <kbd>t</kbd>     | Open link in text-based browser within Emacs |
+| <kbd>n</kbd>     | Move to next title link                      |
+| <kbd>p</kbd>     | Move to previous title link                  |
+| <kbd>TAB</kbd>   | Move to next comments count link             |
+| <kbd>S-TAB</kbd> | Move to previous comments count link         |
+| <kbd>m</kbd>     | Load more stories                            |
+| <kbd>g</kbd>     | Reload stories                               |
+| <kbd>f</kbd>     | Prompt user for a feed to switch to          |
+| <kbd>q</kbd>     | Quit                                         |
 
 All feed re/loading commands accept an optional [numeric prefix
 argument](https://www.gnu.org/software/emacs/manual/html_node/emacs/Arguments.html)
