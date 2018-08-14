@@ -51,6 +51,12 @@
   :package-version '(hackernews . "0.4.0")
   :group 'hackernews)
 
+(defface hackernews-link-visited
+  '((t :inherit link-visited :underline nil))
+  "Face used for links to stories."
+  :package-version '(hackernews . "0.4.0")
+  :group 'hackernews)
+
 (define-obsolete-face-alias 'hackernews-comment-count-face
   'hackernews-comment-count "0.4.0")
 
@@ -243,9 +249,17 @@ See `browse-url-browser-function' for some possible options."
   'follow-link t
   'keymap      hackernews-button-map)
 
+(define-button-type 'hackernews-link-visited
+  'action      #'hackernews-browse-url-action
+  'face        'hackernews-link-visited
+  'follow-link t
+  'keymap      hackernews-button-map)
+
 (define-button-type 'hackernews-comment-count
   'face      'hackernews-comment-count
   'supertype 'hackernews-link)
+
+(defvar hackernews--visited-ids '())
 
 ;; Emulate `define-error'
 (put 'hackernews-error 'error-conditions '(hackernews-error error))
@@ -300,6 +314,7 @@ This is intended as an :annotation-function in
             ((< x 0) -1)
             (t        0))))
   "Compatibility shim for `cl-signum'.")
+
 
 ;;; Motion
 
@@ -353,6 +368,8 @@ N defaults to 1."
 
 (defun hackernews-browse-url-action (button)
   "Pass URL of BUTTON to `browse-url'."
+  (let ((id (button-get button 'id)))
+    (add-to-list 'hackernews--visited-ids id))
   (browse-url (button-get button 'shr-url)))
 
 (defun hackernews-button-browse-internal ()
@@ -360,12 +377,14 @@ N defaults to 1."
 The URL is passed to `hackernews-internal-browser-function',
 which see."
   (interactive)
+  (let ((id (button-get (button-at (point)) 'id)))
+    (add-to-list 'hackernews--visited-ids id))
   (funcall hackernews-internal-browser-function
            (button-get (point) 'shr-url)))
 
-(defun hackernews--button-string (type label url)
+(defun hackernews--button-string (type label url id)
   "Return button string of TYPE pointing to URL with LABEL."
-  (make-text-button label nil 'type type 'help-echo url 'shr-url url)
+  (make-text-button label nil 'type type 'help-echo url 'shr-url url 'id id)
   label)
 
 (defun hackernews--render-item (item)
@@ -389,13 +408,15 @@ their respective URLs."
                    ?s (propertize (format hackernews-score-format score)
                                   'face 'hackernews-score)
                    ?t (hackernews--button-string
-                       'hackernews-link
+                       (if (member id hackernews--visited-ids) 'hackernews-link-visited 'hackernews-link)
                        (format hackernews-title-format title)
-                       (or item-url comments-url))
+                       (or item-url comments-url)
+		       id)
                    ?c (hackernews--button-string
                        'hackernews-comment-count
                        (format hackernews-comments-format (or descendants 0))
-                       comments-url))))))
+                       comments-url
+		       id))))))
 
 (defun hackernews--display-items ()
   "Render items associated with, and pop to, the current buffer."
