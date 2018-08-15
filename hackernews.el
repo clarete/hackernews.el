@@ -361,7 +361,7 @@ The URL is passed to `hackernews-internal-browser-function',
 which see."
   (interactive)
   (funcall hackernews-internal-browser-function
-           (button-get (button-at (point)) 'shr-url)))
+           (button-get (point) 'shr-url)))
 
 (defun hackernews--button-string (type label url)
   "Return button string of TYPE pointing to URL with LABEL."
