@@ -66,6 +66,12 @@
   :package-version '(hackernews . "0.4.0")
   :group 'hackernews)
 
+(defface hackernews-comment-count-visited
+  '((t :inherit hackernews-link))
+  "Face used for comment counts."
+  :package-version '(hackernews . "0.4.0")
+  :group 'hackernews)
+
 (define-obsolete-face-alias 'hackernews-score-face
   'hackernews-score "0.4.0")
 
@@ -259,7 +265,12 @@ See `browse-url-browser-function' for some possible options."
   'face      'hackernews-comment-count
   'supertype 'hackernews-link)
 
-(defvar hackernews--visited-ids '())
+(define-button-type 'hackernews-comment-count-visited
+  'face      'hackernews-comment-count
+  'supertype 'hackernews-link)
+
+(defvar hackernews--visited-article-ids '())
+(defvar hackernews--visited-comment-ids '())
 
 ;; Emulate `define-error'
 (put 'hackernews-error 'error-conditions '(hackernews-error error))
@@ -368,8 +379,11 @@ N defaults to 1."
 
 (defun hackernews-browse-url-action (button)
   "Pass URL of BUTTON to `browse-url'."
-  (let ((id (button-get button 'id)))
-    (add-to-list 'hackernews--visited-ids id))
+  (let ((id (button-get (button-at (point)) 'id))
+	(url (button-get (button-at (point)) 'shr-url)))
+    (if (string-match-p (regexp-quote "ycombinator") url)
+	(add-to-list 'hackernews--visited-comment-ids id)
+      (add-to-list 'hackernews--visited-article-ids id)))
   (browse-url (button-get button 'shr-url)))
 
 (defun hackernews-button-browse-internal ()
@@ -377,8 +391,11 @@ N defaults to 1."
 The URL is passed to `hackernews-internal-browser-function',
 which see."
   (interactive)
-  (let ((id (button-get (button-at (point)) 'id)))
-    (add-to-list 'hackernews--visited-ids id))
+  (let ((id (button-get (button-at (point)) 'id))
+	(url (button-get (button-at (point)) 'shr-url)))
+    (if (string-match-p (regexp-quote "ycombinator") url)
+	(add-to-list 'hackernews--visited-comment-ids id)
+      (add-to-list 'hackernews--visited-article-ids id)))
   (funcall hackernews-internal-browser-function
            (button-get (point) 'shr-url)))
 
@@ -408,12 +425,12 @@ their respective URLs."
                    ?s (propertize (format hackernews-score-format score)
                                   'face 'hackernews-score)
                    ?t (hackernews--button-string
-                       (if (member id hackernews--visited-ids) 'hackernews-link-visited 'hackernews-link)
+                       (if (member id hackernews--visited-article-ids) 'hackernews-link-visited 'hackernews-link)
                        (format hackernews-title-format title)
                        (or item-url comments-url)
 		       id)
                    ?c (hackernews--button-string
-                       'hackernews-comment-count
+		       (if (member id hackernews--visited-comment-ids) 'hackernews-link-visited 'hackernews-link)
                        (format hackernews-comments-format (or descendants 0))
                        comments-url
 		       id))))))
