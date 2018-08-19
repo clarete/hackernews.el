@@ -423,12 +423,16 @@ their respective URLs."
                    ?s (propertize (format hackernews-score-format score)
                                   'face 'hackernews-score)
                    ?t (hackernews--button-string
-                       (if (member id (button-type-get 'hackernews-link 'hackernews-visited-ids)) 'hackernews-link-visited 'hackernews-link)
+                       (if (member id (button-type-get 'hackernews-link 'hackernews-visited-ids))
+			   'hackernews-link-visited
+			 'hackernews-link)
                        (format hackernews-title-format title)
                        (or item-url comments-url)
 		       id)
                    ?c (hackernews--button-string
-		       (if (member id (button-type-get 'hackernews-comment-count 'hackernews-visited-ids)) 'hackernews-comment-count-visited 'hackernews-comment-count)
+		       (if (member id (button-type-get 'hackernews-comment-count 'hackernews-visited-ids))
+			   'hackernews-comment-count-visited
+			 'hackernews-comment-count)
                        (format hackernews-comments-format (or descendants 0))
                        comments-url
 		       id))))))
