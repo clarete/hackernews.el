@@ -379,10 +379,9 @@ N defaults to 1."
 (defun hackernews-browse-url-action (button)
   "Pass URL of BUTTON to `browse-url'."
   (let ((id (button-get (button-at (point)) 'id))
-	(url (button-get (button-at (point)) 'shr-url)))
-    (if (string-match-p (regexp-quote "ycombinator") url)
-	(add-to-list 'hackernews--visited-comment-ids id)
-      (add-to-list 'hackernews--visited-article-ids id)))
+	(url (button-get (button-at (point)) 'shr-url))
+	(button-type (button-get (button-at (point)) 'type)))
+    (button-type-put button-type 'hackernews-visited-ids (cons id (button-type-get button-type 'hackernews-visited-ids))))
   (browse-url (button-get button 'shr-url)))
 
 (defun hackernews-button-browse-internal ()
@@ -391,10 +390,9 @@ The URL is passed to `hackernews-internal-browser-function',
 which see."
   (interactive)
   (let ((id (button-get (button-at (point)) 'id))
-	(url (button-get (button-at (point)) 'shr-url)))
-    (if (string-match-p (regexp-quote "ycombinator") url)
-	(add-to-list 'hackernews--visited-comment-ids id)
-      (add-to-list 'hackernews--visited-article-ids id)))
+	(url (button-get (button-at (point)) 'shr-url))
+	(button-type (button-get (button-at (point)) 'type)))
+    (button-type-put button-type 'hackernews-visited-ids (cons id (button-type-get button-type 'hackernews-visited-ids))))
   (funcall hackernews-internal-browser-function
            (button-get (point) 'shr-url)))
 
@@ -424,12 +422,12 @@ their respective URLs."
                    ?s (propertize (format hackernews-score-format score)
                                   'face 'hackernews-score)
                    ?t (hackernews--button-string
-                       (if (member id hackernews--visited-article-ids) 'hackernews-link-visited 'hackernews-link)
+                       (if (member id (button-type-get 'hackernews-link 'hackernews-visited-ids)) 'hackernews-link-visited 'hackernews-link)
                        (format hackernews-title-format title)
                        (or item-url comments-url)
 		       id)
                    ?c (hackernews--button-string
-		       (if (member id hackernews--visited-comment-ids) 'hackernews-link-visited 'hackernews-link)
+		       (if (member id (button-type-get 'hackernews-comment-count 'hackernews-visited-ids)) 'hackernews-comment-count-visited 'hackernews-comment-count)
                        (format hackernews-comments-format (or descendants 0))
                        comments-url
 		       id))))))
