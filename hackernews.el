@@ -250,27 +250,26 @@ See `browse-url-browser-function' for some possible options."
   "Keymap used on hackernews links.")
 
 (define-button-type 'hackernews-link
-  'action      #'hackernews-browse-url-action
-  'face        'hackernews-link
-  'follow-link t
-  'keymap      hackernews-button-map)
+  'action                    #'hackernews-browse-url-action
+  'face                      'hackernews-link
+  'follow-link               t
+  'hackernews-visited-ids    '()
+  'hackernews-visited-button 'hackernews-link-visited
+  'keymap                    hackernews-button-map)
 
 (define-button-type 'hackernews-link-visited
-  'action      #'hackernews-browse-url-action
-  'face        'hackernews-link-visited
-  'follow-link t
-  'keymap      hackernews-button-map)
+  'face      'hackernews-link-visited
+  'supertype 'hackernews-link)
 
 (define-button-type 'hackernews-comment-count
-  'face      'hackernews-comment-count
-  'supertype 'hackernews-link)
+  'face                      'hackernews-comment-count
+  'hackernews-visited-ids    '()
+  'hackernews-visited-button 'hackernews-comment-count-visited
+  'supertype                 'hackernews-link)
 
 (define-button-type 'hackernews-comment-count-visited
-  'face      'hackernews-comment-count
-  'supertype 'hackernews-link)
-
-(defvar hackernews--visited-article-ids '())
-(defvar hackernews--visited-comment-ids '())
+  'face      'hackernews-comment-count-visited
+  'supertype 'hackernews-comment-count)
 
 ;; Emulate `define-error'
 (put 'hackernews-error 'error-conditions '(hackernews-error error))
