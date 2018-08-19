@@ -378,23 +378,23 @@ N defaults to 1."
 
 (defun hackernews-browse-url-action (button)
   "Pass URL of BUTTON to `browse-url'."
-  (let ((id (button-get (button-at (point)) 'id))
-	(url (button-get (button-at (point)) 'shr-url))
-	(button-type (button-get (button-at (point)) 'type)))
+  (let ((id (button-get button 'id))
+	(url (button-get button 'shr-url))
+	(button-type (button-get button 'type)))
     (button-type-put button-type 'hackernews-visited-ids (cons id (button-type-get button-type 'hackernews-visited-ids))))
   (browse-url (button-get button 'shr-url)))
 
-(defun hackernews-button-browse-internal ()
+(defun hackernews-button-browse-internal (button)
   "Open URL of button under point within Emacs.
 The URL is passed to `hackernews-internal-browser-function',
 which see."
   (interactive)
-  (let ((id (button-get (button-at (point)) 'id))
-	(url (button-get (button-at (point)) 'shr-url))
-	(button-type (button-get (button-at (point)) 'type)))
+  (let ((id (button-get button 'id))
+	(url (button-get button 'shr-url))
+	(button-type (button-get button 'type)))
     (button-type-put button-type 'hackernews-visited-ids (cons id (button-type-get button-type 'hackernews-visited-ids))))
   (funcall hackernews-internal-browser-function
-           (button-get (point) 'shr-url)))
+           (button-get button 'shr-url)))
 
 (defun hackernews--button-string (type label url id)
   "Return button string of TYPE pointing to URL with LABEL."
