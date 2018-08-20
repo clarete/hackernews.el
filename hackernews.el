@@ -199,6 +199,13 @@ See `browse-url-browser-function' for some possible options."
   :group 'hackernews
   :type (cons 'radio (butlast (cdr (custom-variable-type
                                     'browse-url-browser-function)))))
+
+(defcustom hackernews-show-visited t
+  "Whether to distinguish the appearance of visited links with a
+  distinct face."
+  :package-version '(hackernews . "0.5.0")
+  :group 'hackernews
+  :type 'boolean)
 
 ;;; Internal definitions
 
@@ -383,8 +390,9 @@ N defaults to 1."
 	  (url (bget 'shr-url))
 	  (button-type (bget 'type)))
       (button-type-put button-type 'hackernews-visited-ids (cons id (button-type-get button-type 'hackernews-visited-ids)))
-      (let ((inhibit-read-only t))
-	(button-put button 'type 'hackernews-link-visited))
+      (if hackernews-show-visited
+	  (let ((inhibit-read-only t))
+	    (button-put button 'type 'hackernews-link-visited)))
       (browse-url url))))
 
 (defun hackernews-button-browse-internal (button)
@@ -397,8 +405,9 @@ which see."
 	  (url (bget 'shr-url))
 	  (button-type (bget 'type)))
       (button-type-put button-type 'hackernews-visited-ids (cons id (button-type-get button-type 'hackernews-visited-ids)))
-      (let ((inhibit-read-only t))
-	(button-put button 'type 'hackernews-comment-count-visited))
+      (if hackernews-show-visited
+	  (let ((inhibit-read-only t))
+	    (button-put button 'type 'hackernews-comment-count-visited)))
       (funcall hackernews-internal-browser-function url))))
 
 (defun hackernews--button-string (type label url id)
@@ -427,14 +436,14 @@ their respective URLs."
                    ?s (propertize (format hackernews-score-format score)
                                   'face 'hackernews-score)
                    ?t (hackernews--button-string
-                       (if (member id (button-type-get 'hackernews-link 'hackernews-visited-ids))
+                       (if (and hackernews-show-visited (member id (button-type-get 'hackernews-link 'hackernews-visited-ids)))
 			   'hackernews-link-visited
 			 'hackernews-link)
                        (format hackernews-title-format title)
                        (or item-url comments-url)
 		       id)
                    ?c (hackernews--button-string
-		       (if (member id (button-type-get 'hackernews-comment-count 'hackernews-visited-ids))
+		       (if (and hackernews-show-visited (member id (button-type-get 'hackernews-comment-count 'hackernews-visited-ids)))
 			   'hackernews-comment-count-visited
 			 'hackernews-comment-count)
                        (format hackernews-comments-format (or descendants 0))
