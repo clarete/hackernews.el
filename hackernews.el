@@ -216,44 +216,6 @@ When nil, visited links are not persisted across sessions."
   :group 'hackernews
   :type '(choice file (const :tag "None" nil)))
 
-(defun hackernews-visited-ids-save ()
-  "Save hackernews-visited-ids in `hackernews-visited-links-file'."
-  (when hackernews-visited-links-file
-    (with-temp-file
-	hackernews-visited-links-file
-      (let* ((link-ids (button-type-get
-			'hackernews-link
-			'hackernews-visited-ids))
-	     (comment-ids (button-type-get
-			   'hackernews-comment-count
-			   'hackernews-visited-ids))
-	     (out `((link-ids ,link-ids)
-		    (comment-ids ,comment-ids))))
-	(print out (current-buffer))))))
-
-(defun hackernews-visited-ids-load ()
-  "Read the data from `hackernews-visited-links-file'."
-  (when hackernews-visited-links-file
-    (with-temp-buffer
-      (condition-case nil
-	  (progn
-	    (insert-file-contents-literally
-	     hackernews-visited-links-file)
-	    (goto-char (point-min))
-	    (let ((in (read (current-buffer))))
-	      (button-type-put
-	       'hackernews-link
-	       'hackernews-visited-ids
-	       (cadr (assoc 'link-ids in)))
-	      (button-type-put
-	       'hackernews-comment-count
-	       'hackernews-visited-ids
-	       (cadr (assoc 'comment-ids in)))))
-	(error
-	 (message
-	  "Could not read %s. Cannot load visited-link data."
-	  hackernews-visited-links-file))))))
-
 (unless noninteractive
   (add-hook 'kill-emacs-hook 'hackernews-visited-ids-save))
 
@@ -371,6 +333,46 @@ This is intended as an :annotation-function in
 `completion-extra-properties'."
   (let ((name (hackernews--feed-name feed)))
     (and name (concat " - " name))))
+
+(defun hackernews-visited-links-save ()
+  "Write visited links to `hackernews-visited-links-file'."
+  (when hackernews-visited-links-file
+    (condition-case err
+        (with-temp-file hackernews-visited-links-file
+          (let ((dir (file-name-directory hackernews-visited-links-file)))
+            ;; Ensure any parent directories exist
+            (when dir (make-directory dir t)))
+          (prin1 (mapcar (lambda (type)
+                           (cons type (button-type-get
+                                       type 'hackernews-visited-ids)))
+                         '(hackernews-link hackernews-comment-count))
+                 (current-buffer)))
+      (error (lwarn 'hackernews :error
+                    "Could not write `hackernews-visited-links-file': %s"
+                    (error-message-string err))))))
+
+(defun hackernews-visited-ids-load ()
+  "Read visited links from `hackernews-visited-links-file'."
+  (when hackernews-visited-links-file
+    (with-temp-buffer
+      (condition-case err
+	  (progn
+	    (insert-file-contents-literally
+	     hackernews-visited-links-file)
+	    (goto-char (point-min))
+	    (let ((in (read (current-buffer))))
+	      (button-type-put
+	       'hackernews-link
+	       'hackernews-visited-ids
+	       (cadr (assoc 'link-ids in)))
+	      (button-type-put
+	       'hackernews-comment-count
+	       'hackernews-visited-ids
+	       (cadr (assoc 'comment-ids in)))))
+	(error
+	 (lwarn 'hackernews :error
+	  "Could not read `hackernews-visited-links-file': %s"
+	  (error-message-string err)))))))
 
 (defalias 'hackernews--signum
   (if (and (require 'cl-lib nil t)
