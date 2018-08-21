@@ -247,7 +247,7 @@ See `browse-url-browser-function' for some possible options."
   'face      'hackernews-comment-count
   'supertype 'hackernews-link)
 
-;; Emulate `define-error'
+;; Emulate `define-error' for Emacs < 24.4
 (put 'hackernews-error 'error-conditions '(hackernews-error error))
 (put 'hackernews-error 'error-message    "Hackernews error")
 
