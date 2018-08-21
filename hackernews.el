@@ -67,7 +67,7 @@
   :group 'hackernews)
 
 (defface hackernews-comment-count-visited
-  '((t :inherit hackernews-link))
+  '((t :inherit hackernews-link-visited))
   "Face used for comment counts."
   :package-version '(hackernews . "0.4.0")
   :group 'hackernews)
@@ -200,12 +200,53 @@ See `browse-url-browser-function' for some possible options."
   :type (cons 'radio (butlast (cdr (custom-variable-type
                                     'browse-url-browser-function)))))
 
-(defcustom hackernews-show-visited t
+(defcustom hackernews-show-visited-links t
   "Whether to distinguish the appearance of visited links with a
   distinct face."
   :package-version '(hackernews . "0.5.0")
   :group 'hackernews
   :type 'boolean)
+
+(defcustom hackernews-visited-ids-file (locate-user-emacs-file ".hackernews-visited-ids")
+  "The file for remembering which links have been visited. When
+  nil, visited links are not persisted between sessions."
+  :package-version '(hackernews . "0.5.0")
+  :group 'hackernews
+  :type 'file)
+
+(defun hackernews-visited-ids-save ()
+  "Save hackernews-visited-ids in `hackernews-visited-ids-file'."
+  (when hackernews-visited-ids-file
+    (with-temp-file hackernews-visited-ids-file
+      (let* ((visited-article-ids (button-type-get 'hackernews-link 'hackernews-visited-ids))
+	     (visited-comments-ids (button-type-get 'hackernews-comment-count 'hackernews-visited-ids))
+	     (out `((visited-article-ids ,visited-article-ids) (visited-comments-ids ,visited-comments-ids))))
+	(print out (current-buffer))))))
+
+(defun hackernews-visited-ids-load ()
+  "Read the data from `hackernews-visited-ids-file'."
+  (when hackernews-visited-ids-file
+    (with-temp-buffer
+      (condition-case nil
+	  (progn
+	    (insert-file-contents-literally hackernews-visited-ids-file)
+	    (goto-char (point-min))
+	    (let ((in (read (current-buffer))))
+	      (button-type-put 'hackernews-link 'hackernews-visited-ids (cadr (assoc 'visited-article-ids in)))
+	      (button-type-put 'hackernews-comment-count 'hackernews-visited-ids (cadr (assoc 'visited-comments-ids in)))))
+	(error (message "Could not read %s. Cannot load visited-link data." hackernews-visited-ids-file))))))
+
+(with-temp-buffer
+  (progn
+    (insert-file-contents-literally hackernews-visited-ids-file)
+    (goto-char (point-min))
+    (let ((in (read (current-buffer))))
+      (cadr (assoc 'visited-article-ids in))
+      (cadr (assoc 'visited-comments-ids in))
+      )))
+
+(unless noninteractive
+  (add-hook 'kill-emacs-hook 'hackernews-visited-ids-save))
 
 ;;; Internal definitions
 
@@ -390,7 +431,7 @@ N defaults to 1."
 	  (url (bget 'shr-url))
 	  (button-type (bget 'type)))
       (button-type-put button-type 'hackernews-visited-ids (cons id (button-type-get button-type 'hackernews-visited-ids)))
-      (if hackernews-show-visited
+      (if hackernews-show-visited-links
 	  (let ((inhibit-read-only t))
 	    (button-put button 'type 'hackernews-link-visited)))
       (browse-url url))))
@@ -405,7 +446,7 @@ which see."
 	  (url (bget 'shr-url))
 	  (button-type (bget 'type)))
       (button-type-put button-type 'hackernews-visited-ids (cons id (button-type-get button-type 'hackernews-visited-ids)))
-      (if hackernews-show-visited
+      (if hackernews-show-visited-links
 	  (let ((inhibit-read-only t))
 	    (button-put button 'type 'hackernews-comment-count-visited)))
       (funcall hackernews-internal-browser-function url))))
@@ -436,14 +477,14 @@ their respective URLs."
                    ?s (propertize (format hackernews-score-format score)
                                   'face 'hackernews-score)
                    ?t (hackernews--button-string
-                       (if (and hackernews-show-visited (member id (button-type-get 'hackernews-link 'hackernews-visited-ids)))
+                       (if (and hackernews-show-visited-links (member id (button-type-get 'hackernews-link 'hackernews-visited-ids)))
 			   'hackernews-link-visited
 			 'hackernews-link)
                        (format hackernews-title-format title)
                        (or item-url comments-url)
 		       id)
                    ?c (hackernews--button-string
-		       (if (and hackernews-show-visited (member id (button-type-get 'hackernews-comment-count 'hackernews-visited-ids)))
+		       (if (and hackernews-show-visited-links (member id (button-type-get 'hackernews-comment-count 'hackernews-visited-ids)))
 			   'hackernews-comment-count-visited
 			 'hackernews-comment-count)
                        (format hackernews-comments-format (or descendants 0))
@@ -603,6 +644,7 @@ rendered at the end of the hackernews buffer."
 The Hacker News feed is determined by `hackernews-default-feed'
 and N defaults to `hackernews-items-per-page'."
   (interactive "P")
+  (hackernews-visited-ids-load)
   (hackernews--load-stories hackernews-default-feed n))
 
 (defun hackernews-reload (&optional n)
