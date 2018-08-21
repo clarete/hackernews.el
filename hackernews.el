@@ -209,7 +209,8 @@ face is changed to `hackernews-link-visited'."
   :group 'hackernews
   :type 'boolean)
 
-(defcustom hackernews-visited-links-file (locate-user-emacs-file "hackernews/visited-links.el")
+(defcustom hackernews-visited-links-file
+  (locate-user-emacs-file "hackernews/visited-links.el")
   "Name of file used to remember which links have been visited.
 When nil, visited links are not persisted across sessions."
   :package-version '(hackernews . "0.5.0")
@@ -272,7 +273,7 @@ When nil, visited links are not persisted across sessions."
   'action                    #'hackernews-browse-url-action
   'face                      'hackernews-link
   'follow-link               t
-  'hackernews-visited-ids    '()
+  'hackernews-visited-ids    ()
   'hackernews-visited-button 'hackernews-link-visited
   'keymap                    hackernews-button-map)
 
@@ -282,7 +283,7 @@ When nil, visited links are not persisted across sessions."
 
 (define-button-type 'hackernews-comment-count
   'face                      'hackernews-comment-count
-  'hackernews-visited-ids    '()
+  'hackernews-visited-ids    ()
   'hackernews-visited-button 'hackernews-comment-count-visited
   'supertype                 'hackernews-link)
 
@@ -383,7 +384,6 @@ This is intended as an :annotation-function in
             ((< x 0) -1)
             (t        0))))
   "Compatibility shim for `cl-signum'.")
-
 
 ;;; Motion
 
