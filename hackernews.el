@@ -53,8 +53,8 @@
 
 (defface hackernews-link-visited
   '((t :inherit link-visited :underline nil))
-  "Face used for links to stories."
-  :package-version '(hackernews . "0.4.0")
+  "Face used for visited links to stories."
+  :package-version '(hackernews . "0.5.0")
   :group 'hackernews)
 
 (define-obsolete-face-alias 'hackernews-comment-count-face
@@ -68,8 +68,8 @@
 
 (defface hackernews-comment-count-visited
   '((t :inherit hackernews-link-visited))
-  "Face used for comment counts."
-  :package-version '(hackernews . "0.4.0")
+  "Face used for visited comment counts."
+  :package-version '(hackernews . "0.5.0")
   :group 'hackernews)
 
 (define-obsolete-face-alias 'hackernews-score-face
@@ -201,49 +201,58 @@ See `browse-url-browser-function' for some possible options."
                                     'browse-url-browser-function)))))
 
 (defcustom hackernews-show-visited-links t
-  "Whether to distinguish the appearance of visited links with a
-  distinct face."
+  "Whether to visually distinguish links that have been visited.
+For example, when a link with the `hackernews-link' face is
+visited and the value of this variable is non-nil, that link's
+face is changed to `hackernews-link-visited'."
   :package-version '(hackernews . "0.5.0")
   :group 'hackernews
   :type 'boolean)
 
-(defcustom hackernews-visited-ids-file (locate-user-emacs-file ".hackernews-visited-ids")
-  "The file for remembering which links have been visited. When
-  nil, visited links are not persisted between sessions."
+(defcustom hackernews-visited-links-file (locate-user-emacs-file "/hackernews/visited-links.el")
+  "Name of file used to remember which links have been visited.
+When nil, visited links are not persisted across sessions."
   :package-version '(hackernews . "0.5.0")
   :group 'hackernews
-  :type 'file)
+  :type '(choice file (const :tag "None" nil)))
 
 (defun hackernews-visited-ids-save ()
-  "Save hackernews-visited-ids in `hackernews-visited-ids-file'."
-  (when hackernews-visited-ids-file
-    (with-temp-file hackernews-visited-ids-file
-      (let* ((visited-article-ids (button-type-get 'hackernews-link 'hackernews-visited-ids))
-	     (visited-comments-ids (button-type-get 'hackernews-comment-count 'hackernews-visited-ids))
-	     (out `((visited-article-ids ,visited-article-ids) (visited-comments-ids ,visited-comments-ids))))
+  "Save hackernews-visited-ids in `hackernews-visited-links-file'."
+  (when hackernews-visited-links-file
+    (with-temp-file
+	hackernews-visited-links-file
+      (let* ((link-ids (button-type-get
+			'hackernews-link
+			'hackernews-visited-ids))
+	     (comment-ids (button-type-get
+			   'hackernews-comment-count
+			   'hackernews-visited-ids))
+	     (out `((link-ids ,link-ids)
+		    (comment-ids ,comment-ids))))
 	(print out (current-buffer))))))
 
 (defun hackernews-visited-ids-load ()
-  "Read the data from `hackernews-visited-ids-file'."
-  (when hackernews-visited-ids-file
+  "Read the data from `hackernews-visited-links-file'."
+  (when hackernews-visited-links-file
     (with-temp-buffer
       (condition-case nil
 	  (progn
-	    (insert-file-contents-literally hackernews-visited-ids-file)
+	    (insert-file-contents-literally
+	     hackernews-visited-links-file)
 	    (goto-char (point-min))
 	    (let ((in (read (current-buffer))))
-	      (button-type-put 'hackernews-link 'hackernews-visited-ids (cadr (assoc 'visited-article-ids in)))
-	      (button-type-put 'hackernews-comment-count 'hackernews-visited-ids (cadr (assoc 'visited-comments-ids in)))))
-	(error (message "Could not read %s. Cannot load visited-link data." hackernews-visited-ids-file))))))
-
-(with-temp-buffer
-  (progn
-    (insert-file-contents-literally hackernews-visited-ids-file)
-    (goto-char (point-min))
-    (let ((in (read (current-buffer))))
-      (cadr (assoc 'visited-article-ids in))
-      (cadr (assoc 'visited-comments-ids in))
-      )))
+	      (button-type-put
+	       'hackernews-link
+	       'hackernews-visited-ids
+	       (cadr (assoc 'link-ids in)))
+	      (button-type-put
+	       'hackernews-comment-count
+	       'hackernews-visited-ids
+	       (cadr (assoc 'comment-ids in)))))
+	(error
+	 (message
+	  "Could not read %s. Cannot load visited-link data."
+	  hackernews-visited-links-file))))))
 
 (unless noninteractive
   (add-hook 'kill-emacs-hook 'hackernews-visited-ids-save))
