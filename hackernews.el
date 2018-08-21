@@ -217,7 +217,7 @@ When nil, visited links are not persisted across sessions."
   :type '(choice file (const :tag "None" nil)))
 
 (unless noninteractive
-  (add-hook 'kill-emacs-hook 'hackernews-visited-ids-save))
+  (add-hook 'kill-emacs-hook 'hackernews-visited-links-save))
 
 ;;; Internal definitions
 
