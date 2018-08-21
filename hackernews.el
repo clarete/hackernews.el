@@ -351,7 +351,7 @@ This is intended as an :annotation-function in
                     "Could not write `hackernews-visited-links-file': %s"
                     (error-message-string err))))))
 
-(defun hackernews-visited-ids-load ()
+(defun hackernews-visited-links-load ()
   "Read visited links from `hackernews-visited-links-file'."
   (when hackernews-visited-links-file
     (with-temp-buffer
@@ -371,8 +371,8 @@ This is intended as an :annotation-function in
 	       (cadr (assoc 'comment-ids in)))))
 	(error
 	 (lwarn 'hackernews :error
-	  "Could not read `hackernews-visited-links-file': %s"
-	  (error-message-string err)))))))
+		"Could not read `hackernews-visited-links-file': %s"
+		(error-message-string err)))))))
 
 (defalias 'hackernews--signum
   (if (and (require 'cl-lib nil t)
@@ -650,12 +650,14 @@ rendered at the end of the hackernews buffer."
 ;;; Feeds
 
 ;;;###autoload
+(setq hackernews--visited-links-loaded nil)
 (defun hackernews (&optional n)
   "Read top N Hacker News stories.
 The Hacker News feed is determined by `hackernews-default-feed'
 and N defaults to `hackernews-items-per-page'."
   (interactive "P")
-  (hackernews-visited-ids-load)
+  (if (not hackernews--visited-links-loaded)
+      (hackernews-visited-links-load))
   (hackernews--load-stories hackernews-default-feed n))
 
 (defun hackernews-reload (&optional n)
