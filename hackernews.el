@@ -447,19 +447,19 @@ N defaults to 1."
 	    (button-put button 'type 'hackernews-link-visited)))
       (browse-url url))))
 
-(defun hackernews-button-browse-internal (button)
+(defun hackernews-button-browse-internal ()
   "Open URL of button under point within Emacs.
 The URL is passed to `hackernews-internal-browser-function',
 which see."
   (interactive)
-  (flet ((bget (prop) (button-get button prop)))
+  (flet ((bget (prop) (button-get (button-at (point)) prop)))
     (let ((id (bget 'id))
 	  (url (bget 'shr-url))
 	  (button-type (bget 'type)))
       (button-type-put button-type 'hackernews-visited-ids (cons id (button-type-get button-type 'hackernews-visited-ids)))
       (if hackernews-show-visited-links
 	  (let ((inhibit-read-only t))
-	    (button-put button 'type 'hackernews-comment-count-visited)))
+	    (button-put (button-at (point)) 'type 'hackernews-comment-count-visited)))
       (funcall hackernews-internal-browser-function url))))
 
 (defun hackernews--button-string (type label url id)
