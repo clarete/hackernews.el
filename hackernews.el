@@ -209,7 +209,7 @@ face is changed to `hackernews-link-visited'."
   :group 'hackernews
   :type 'boolean)
 
-(defcustom hackernews-visited-links-file (locate-user-emacs-file "/hackernews/visited-links.el")
+(defcustom hackernews-visited-links-file (locate-user-emacs-file "hackernews/visited-links.el")
   "Name of file used to remember which links have been visited.
 When nil, visited links are not persisted across sessions."
   :package-version '(hackernews . "0.5.0")
