@@ -614,7 +614,7 @@ rendered at the end of the hackernews buffer."
     (dolist (entry hackernews--visited-ids)
       (setcdr entry (make-hash-table)))
     (hackernews-visited-links-load)
-    (add-hook 'kill-emacs-hook #'hackernews-save-visited-links))
+    (add-hook 'kill-emacs-hook #'hackernews-visited-links-save))
 
   (let* ((name   (hackernews--feed-name feed))
          (offset (or (car append) 0))
