@@ -340,31 +340,6 @@ This is intended as an :annotation-function in
   (let ((name (hackernews--feed-name feed)))
     (and name (concat " - " name))))
 
-(defun hackernews-visited-links-save ()
-  "Write visited links to `hackernews-visited-links-file'."
-  (when hackernews-visited-links-file
-    (condition-case err
-        (with-temp-file hackernews-visited-links-file
-          (let ((dir (file-name-directory hackernews-visited-links-file)))
-            ;; Ensure any parent directories exist
-            (when dir (make-directory dir t)))
-          (prin1 hackernews--visited-ids (current-buffer)))
-      (error (lwarn 'hackernews :error
-                    "Could not write `hackernews-visited-links-file': %s"
-                    (error-message-string err))))))
-
-(defun hackernews-visited-links-load ()
-  "Read visited links from `hackernews-visited-links-file'."
-  (and hackernews-visited-links-file
-       (file-exists-p hackernews-visited-links-file)
-       (condition-case err
-           (with-temp-buffer
-             (insert-file-contents hackernews-visited-links-file)
-             (setq hackernews--visited-ids (read (current-buffer))))
-         (error (lwarn 'hackernews :error
-                       "Could not read `hackernews-visited-links-file': %s"
-                       (error-message-string err))))))
-
 (defalias 'hackernews--signum
   (if (and (require 'cl-lib nil t)
            (fboundp 'cl-signum))
@@ -424,6 +399,31 @@ N defaults to 1."
   (hackernews-next-item))
 
 ;;; UI
+
+(defun hackernews-visited-links-save ()
+  "Write visited links to `hackernews-visited-links-file'."
+  (when hackernews-visited-links-file
+    (condition-case err
+        (with-temp-file hackernews-visited-links-file
+          (let ((dir (file-name-directory hackernews-visited-links-file)))
+            ;; Ensure any parent directories exist
+            (when dir (make-directory dir t)))
+          (prin1 hackernews--visited-ids (current-buffer)))
+      (error (lwarn 'hackernews :error
+                    "Could not write `hackernews-visited-links-file': %s"
+                    (error-message-string err))))))
+
+(defun hackernews-visited-links-load ()
+  "Read visited links from `hackernews-visited-links-file'."
+  (and hackernews-visited-links-file
+       (file-exists-p hackernews-visited-links-file)
+       (condition-case err
+           (with-temp-buffer
+             (insert-file-contents hackernews-visited-links-file)
+             (setq hackernews--visited-ids (read (current-buffer))))
+         (error (lwarn 'hackernews :error
+                       "Could not read `hackernews-visited-links-file': %s"
+                       (error-message-string err))))))
 
 (defun hackernews--visit (button fn)
   "Visit URL of BUTTON by passing to to FN."
