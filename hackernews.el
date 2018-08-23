@@ -267,20 +267,20 @@ When nil, visited links are not persisted across sessions."
   "Keymap used on hackernews links.")
 
 (define-button-type 'hackernews-link
-  'action                    #'hackernews-browse-url-action
-  'face                      'hackernews-link
-  'follow-link               t
-  'hackernews-visited-button 'hackernews-link-visited
-  'keymap                    hackernews-button-map)
+  'action                  #'hackernews-browse-url-action
+  'face                    'hackernews-link
+  'follow-link             t
+  'hackernews-visited-type 'hackernews-link-visited
+  'keymap                  hackernews-button-map)
 
 (define-button-type 'hackernews-link-visited
   'face      'hackernews-link-visited
   'supertype 'hackernews-link)
 
 (define-button-type 'hackernews-comment-count
-  'face                      'hackernews-comment-count
-  'hackernews-visited-button 'hackernews-comment-count-visited
-  'supertype                 'hackernews-link)
+  'face                    'hackernews-comment-count
+  'hackernews-visited-type 'hackernews-comment-count-visited
+  'supertype               'hackernews-link)
 
 ;; Remove `hackernews-link' as `supertype' so that
 ;; `hackernews--forward-button' can distinguish between
@@ -427,7 +427,7 @@ N defaults to 1."
 (defun hackernews--visit (button fn)
   "Visit URL of BUTTON by passing to to FN."
   (let* ((type  (button-type button))
-         (vtype (button-type-get type 'hackernews-visited-button))
+         (vtype (button-type-get type 'hackernews-visited-type))
          (inhibit-read-only t))
     (when (and hackernews-show-visited-links
                (not (eq type vtype)))
@@ -450,12 +450,12 @@ which see."
 
 (defun hackernews--button-string (type label url id)
   "Return button string of TYPE pointing to URL with LABEL.
-Replace TYPE with the value of its `hackernews-visited-button'
+Replace TYPE with the value of its `hackernews-visited-type'
 property if `hackernews-show-visited-links' is non-nil and a
 button with TYPE and ID is known to have been visited."
   (and hackernews-show-visited-links
        (gethash id (cdr (assq type hackernews--visited-ids)))
-       (setq type (button-type-get type 'hackernews-visited-button)))
+       (setq type (button-type-get type 'hackernews-visited-type)))
   (make-text-button label nil 'type type 'help-echo url 'shr-url url 'id id)
   label)
 
