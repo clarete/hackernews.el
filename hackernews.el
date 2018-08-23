@@ -293,7 +293,8 @@ When nil, visited links are not persisted across sessions."
 
 (defvar hackernews--visited-ids '((hackernews-link)
                                   (hackernews-comment-count))
-  "Map link button types to their visited ID sets.")
+  "Map link button types to their visited ID sets.
+Values are initially nil and later replaced with a hash table.")
 
 ;; Emulate `define-error'
 (put 'hackernews-error 'error-conditions '(hackernews-error error))
