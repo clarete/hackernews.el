@@ -140,7 +140,8 @@ In general, errors and misbehavior pertaining to network retrieval and
 JSON parsing are probably due to bugs in older Emacsen.  The minimum
 recommended Emacs version for `hackernews` is 25.  Emacs 24 should
 work, but suffers from network security vulnerabilities that were
-fixed in version 25.
+fixed in version 25.  Emacs 23 is no longer officially supported as of
+[2018-06-08](https://github.com/clarete/hackernews.el/issues/46).
 
 In any case, please report any problems on the project's [issue
 tracker](https://github.com/clarete/hackernews.el/issues), so that the
