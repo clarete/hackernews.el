@@ -462,7 +462,7 @@ N.B.  Any valid data in the file will be overwritten next time
                     (error-message-string err))))))
 
 (defun hackernews--visit (button fn)
-  "Visit URL of BUTTON by passing to to FN."
+  "Visit URL of BUTTON by passing it to FN."
   (let* ((id    (button-get button 'id))
          (type  (button-type button))
          (vtype (button-type-get type 'hackernews-visited-type))
