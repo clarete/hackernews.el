@@ -400,7 +400,41 @@ N defaults to 1."
 
 ;;; UI
 
-(defun hackernews-visited-links-save ()
+(defun hackernews-load-visited-links ()
+  "Merge visited links on file with those in memory.
+This command tries to reread `hackernews-visited-links-file',
+which may be useful when, for example, the contents of the file
+change and you want to update the hackernews display without
+restarting Emacs, or the file could not be read initially and
+risks being overwritten next time Emacs is killed."
+  (interactive)
+  (dolist (entry hackernews--visited-ids)
+    (unless (cdr entry)
+      (setcdr entry (make-hash-table))))
+  (when (and hackernews-visited-links-file
+             (file-exists-p hackernews-visited-links-file))
+    (condition-case err
+        (with-temp-buffer
+          (insert-file-contents hackernews-visited-links-file)
+          (dolist (entry (read (current-buffer)))
+            (let ((table (cdr (assq (car entry) hackernews--visited-ids))))
+              (maphash (lambda (k v)
+                         (puthash k v table))
+                       (cdr entry)))))
+      (error
+       (lwarn 'hackernews :error
+              "Could not read `hackernews-visited-links-file':\n      %s%s"
+              (error-message-string err)
+              (substitute-command-keys "
+N.B.  Any valid data in the file will be overwritten next time
+      Emacs is killed.  To avoid data loss, type
+      \\[hackernews-load-visited-links] after fixing the error
+      above.
+      Alternatively, you can set `hackernews-visited-links-file'
+      to nil: the file will not be overwritten, but any links
+      visited in the current Emacs session will not be saved."))))))
+
+(defun hackernews-save-visited-links ()
   "Write visited links to `hackernews-visited-links-file'."
   (when hackernews-visited-links-file
     (condition-case err
@@ -408,22 +442,11 @@ N defaults to 1."
           (let ((dir (file-name-directory hackernews-visited-links-file)))
             ;; Ensure any parent directories exist
             (when dir (make-directory dir t)))
+          (hackernews-load-visited-links)
           (prin1 hackernews--visited-ids (current-buffer)))
       (error (lwarn 'hackernews :error
                     "Could not write `hackernews-visited-links-file': %s"
                     (error-message-string err))))))
-
-(defun hackernews-visited-links-load ()
-  "Read visited links from `hackernews-visited-links-file'."
-  (and hackernews-visited-links-file
-       (file-exists-p hackernews-visited-links-file)
-       (condition-case err
-           (with-temp-buffer
-             (insert-file-contents hackernews-visited-links-file)
-             (setq hackernews--visited-ids (read (current-buffer))))
-         (error (lwarn 'hackernews :error
-                       "Could not read `hackernews-visited-links-file': %s"
-                       (error-message-string err))))))
 
 (defun hackernews--visit (button fn)
   "Visit URL of BUTTON by passing to to FN."
@@ -612,10 +635,8 @@ rendered at the end of the hackernews buffer."
 
   ;; Ensure visited links are set up
   (unless (cdar hackernews--visited-ids)
-    (dolist (entry hackernews--visited-ids)
-      (setcdr entry (make-hash-table)))
-    (hackernews-visited-links-load)
-    (add-hook 'kill-emacs-hook #'hackernews-visited-links-save))
+    (hackernews-load-visited-links)
+    (add-hook 'kill-emacs-hook #'hackernews-save-visited-links))
 
   (let* ((name   (hackernews--feed-name feed))
          (offset (or (car append) 0))
