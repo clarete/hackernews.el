@@ -263,6 +263,7 @@ When nil, visited links are not persisted across sessions."
   (let ((map (make-sparse-keymap)))
     (set-keymap-parent map button-map)
     (define-key map "t" #'hackernews-button-browse-internal)
+    (define-key map "r" #'hackernews-button-mark-as-visited)
     map)
   "Keymap used on hackernews links.")
 
@@ -489,6 +490,11 @@ The URL is passed to `hackernews-internal-browser-function',
 which see."
   (interactive)
   (hackernews--visit (point) hackernews-internal-browser-function))
+
+(defun hackernews-button-mark-as-visited ()
+  "Mark button under point as visited."
+  (interactive)
+  (hackernews--visit (point) 'ignore))
 
 (defun hackernews--button-string (type label url id)
   "Return button string of TYPE pointing to URL with LABEL.
