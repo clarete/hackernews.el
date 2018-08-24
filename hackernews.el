@@ -494,7 +494,7 @@ which see."
 (defun hackernews-button-mark-as-visited ()
   "Mark button under point as visited."
   (interactive)
-  (hackernews--visit (point) 'ignore))
+  (hackernews--visit (point) #'ignore))
 
 (defun hackernews--button-string (type label url id)
   "Return button string of TYPE pointing to URL with LABEL.
