@@ -400,6 +400,13 @@ N defaults to 1."
 
 ;;; UI
 
+(defun hackernews--init-visited-links ()
+  "Set up tracking of visited links.
+Do nothing if `hackernews--visited-ids' is already initialized."
+  (unless (cdar hackernews--visited-ids)
+    (hackernews-load-visited-links)
+    (add-hook 'kill-emacs-hook #'hackernews-save-visited-links)))
+
 (defun hackernews-load-visited-links ()
   "Merge visited links on file with those in memory.
 This command tries to reread `hackernews-visited-links-file',
@@ -632,12 +639,7 @@ off.  At most N of FEED's items starting at OFFSET are then
 rendered at the end of the hackernews buffer."
   ;; TODO: * Allow negative N?
   ;;       * Make asynchronous?
-
-  ;; Ensure visited links are set up
-  (unless (cdar hackernews--visited-ids)
-    (hackernews-load-visited-links)
-    (add-hook 'kill-emacs-hook #'hackernews-save-visited-links))
-
+  (hackernews--init-visited-links)
   (let* ((name   (hackernews--feed-name feed))
          (offset (or (car append) 0))
          (ids    (if append
