@@ -3,7 +3,7 @@
 ;; Copyright (C) 2012-2018 Lincoln de Sousa <lincoln@comum.org>
 
 ;; Author: Lincoln de Sousa <lincoln@comum.org>
-;;         Basil L. Contovounesios <contovob@tcd.ie>
+;; Maintainer: Basil L. Contovounesios <contovob@tcd.ie>
 ;; Keywords: comm hypermedia news
 ;; Version: 0.4.0
 ;; Homepage: https://github.com/clarete/hackernews.el
