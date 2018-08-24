@@ -89,6 +89,7 @@
     ("job"  . "job stories"))
   ;; TODO: Should the keys all be symbols?
   "Map feed types as strings to their display names.")
+;; As per Info node `(elisp) Basic Completion'
 (put 'hackernews-feed-names 'risky-local-variable t)
 
 (defcustom hackernews-default-feed "top"
