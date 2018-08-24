@@ -290,23 +290,15 @@ This is intended as an :annotation-function in
 `completion-extra-properties'."
   (let ((name (hackernews--feed-name feed)))
     (and name (concat " - " name))))
-
-(defalias 'hackernews--signum
-  (if (and (require 'cl-lib nil t)
-           (fboundp 'cl-signum))
-      #'cl-signum
-    (lambda (x)
-      (cond ((> x 0)  1)
-            ((< x 0) -1)
-            (t        0))))
-  "Compatibility shim for `cl-signum'.")
 
 ;;; Motion
 
 (defun hackernews--forward-button (n type)
   "Move to Nth next button of TYPE (previous if N is negative)."
   (let ((pos  (point))
-        (sign (hackernews--signum n))
+        (sign (cond ((> n 0)  1)
+                    ((< n 0) -1)
+                    (t        0)))
         msg)
     (while (let ((button (ignore-errors (forward-button sign))))
              (when button
