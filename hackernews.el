@@ -425,8 +425,13 @@ risks being overwritten next time Emacs is killed."
           (insert-file-contents hackernews-visited-links-file)
           (dolist (entry (read (current-buffer)))
             (let ((table (cdr (assq (car entry) hackernews--visited-ids))))
-              (maphash (lambda (k v)
-                         (puthash k v table))
+              (maphash (lambda (k newv)
+                         (let ((oldv (gethash k table)))
+                           (when (or (not oldv)
+                                     (time-less-p
+                                      (plist-get oldv :last-visited)
+                                      (plist-get newv :last-visited)))
+                             (puthash k newv table))))
                        (cdr entry)))))
       (error
        (lwarn 'hackernews :error
@@ -457,15 +462,21 @@ N.B.  Any valid data in the file will be overwritten next time
 
 (defun hackernews--visit (button fn)
   "Visit URL of BUTTON by passing to to FN."
-  (let* ((type  (button-type button))
+  (let* ((id    (button-get button 'id))
+         (type  (button-type button))
          (vtype (button-type-get type 'hackernews-visited-type))
+         (table (cdr (or (assq type hackernews--visited-ids)
+                         (assq (button-type-get type 'supertype)
+                               hackernews--visited-ids))))
+         (val   (gethash id table))
+         (time  (list :last-visited (current-time)))
          (inhibit-read-only t))
-    (when (and hackernews-show-visited-links
-               (not (eq type vtype)))
-      (button-put button 'type vtype)
-      (puthash (button-get button 'id)
-               t                        ; TODO: Replace with metadata
-               (cdr (assq type hackernews--visited-ids)))))
+    (if val
+        (apply #'plist-put val time)    ; Update :last-visited
+      (puthash id time table))          ; Insert new entry
+    (and hackernews-show-visited-links
+         (not (eq type vtype))
+         (button-put button 'type vtype)))
   (funcall fn (button-get button 'shr-url)))
 
 (defun hackernews-browse-url-action (button)
