@@ -40,7 +40,7 @@
   :group 'external
   :prefix "hackernews-")
 
-;;; Faces
+;;;; Faces
 
 (define-obsolete-face-alias 'hackernews-link-face
   'hackernews-link "0.4.0")
@@ -81,7 +81,7 @@
   :package-version '(hackernews . "0.4.0")
   :group 'hackernews)
 
-;;; User options
+;;;; User options
 
 (define-obsolete-variable-alias 'hackernews-top-story-limit
   'hackernews-items-per-page "0.4.0")
@@ -218,7 +218,7 @@ When nil, visited links are not persisted across sessions."
   :group 'hackernews
   :type '(choice file (const :tag "None" nil)))
 
-;;; Internal definitions
+;;;; Internal definitions
 
 (defconst hackernews-api-version "v0"
   "Currently supported version of the Hacker News API.")
@@ -302,7 +302,7 @@ Values are initially nil and later replaced with a hash table.")
 (put 'hackernews-error 'error-conditions '(hackernews-error error))
 (put 'hackernews-error 'error-message    "Hackernews error")
 
-;;; Utils
+;;;; Utils
 
 (defun hackernews--get (prop)
   "Extract value of PROP from `hackernews--feed-state'."
@@ -342,7 +342,7 @@ This is intended as an :annotation-function in
   (let ((name (hackernews--feed-name feed)))
     (and name (concat " - " name))))
 
-;;; Motion
+;;;; Motion
 
 (defun hackernews--forward-button (n type)
   "Move to Nth next button of TYPE (previous if N is negative)."
@@ -392,7 +392,7 @@ N defaults to 1."
   (goto-char (point-min))
   (hackernews-next-item))
 
-;;; UI
+;;;; UI
 
 (defun hackernews--init-visited-links ()
   "Set up tracking of visited links.
@@ -600,7 +600,7 @@ Official major mode key bindings:
   (unless (derived-mode-p #'hackernews-mode)
     (signal 'hackernews-error '("Not a hackernews buffer"))))
 
-;;; Retrieval
+;;;; Retrieval
 
 (defalias 'hackernews--parse-json
   (if (fboundp 'json-parse-buffer)
@@ -677,7 +677,7 @@ rendered at the end of the hackernews buffer."
       (hackernews--retrieve-items)
       (hackernews--display-items))))
 
-;;; Feeds
+;;;; Feeds
 
 ;;;###autoload
 (defun hackernews (&optional n)
