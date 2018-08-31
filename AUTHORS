@@ -1,0 +1,23 @@
+Several people have contributed code and documentation to the
+hackernews.el Hacker News client for GNU Emacs.  To show our
+appreciation for their public spirit, we list here in alphabetical
+order a condensed list of their contributions.
+
+Basil L. Contovounesios: wrote .dir-locals.el
+and added AUTHORS
+and changed .gitignore Makefile README.md Screenshot.png
+  hackernews-pkg.el hackernews.el
+
+Fabian Wiget: changed hackernews.el to support more faces and
+  interactively loading more stories
+
+Jonas Helgemo: changed README.md to document key bindings
+
+Lincoln de Sousa: wrote .gitignore Makefile README.md
+  hackernews-pkg.el hackernews.el
+and added COPYING Screenshot.png
+
+Matthew Piziak: changed hackernews.el to track visited links
+
+Stephen Hassard: changed hackernews.el to use the official Hacker News
+  Firebase API and be more customizable and navigable
