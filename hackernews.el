@@ -109,9 +109,9 @@
 See `hackernews-feed-names' for supported feed types."
   :package-version '(hackernews . "0.4.0")
   :group 'hackernews
-  :type (cons 'radio (mapcar (lambda (feed)
-                               (list 'const :tag (cdr feed) (car feed)))
-                             hackernews-feed-names)))
+  :type (cons 'choice (mapcar (lambda (feed)
+                                (list 'const :tag (cdr feed) (car feed)))
+                              hackernews-feed-names)))
 
 ;; TODO: Allow the following `*-format' options to take on function values?
 
