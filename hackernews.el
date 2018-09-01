@@ -401,6 +401,29 @@ Do nothing if `hackernews--visited-ids' is already initialized."
     (hackernews-load-visited-links)
     (add-hook 'kill-emacs-hook #'hackernews-save-visited-links)))
 
+(defun hackernews--read-visited-links ()
+  "Read and return contents of `hackernews-visited-links-file'.
+On error, display a warning for the user and return nil."
+  (when (and hackernews-visited-links-file
+             (file-exists-p hackernews-visited-links-file))
+    (condition-case err
+        (with-temp-buffer
+          (insert-file-contents hackernews-visited-links-file)
+          (read (current-buffer)))
+      (error
+       (ignore
+        (lwarn 'hackernews :error
+               "Could not read `hackernews-visited-links-file':\n      %s%s"
+               (error-message-string err)
+               (substitute-command-keys "
+N.B.  Any valid data in the file will be overwritten next time
+      Emacs is killed.  To avoid data loss, type
+      \\[hackernews-load-visited-links] after fixing the error
+      above.
+      Alternatively, you can set `hackernews-visited-links-file'
+      to nil: the file will not be overwritten, but any links
+      visited in the current Emacs session will not be saved.")))))))
+
 (defun hackernews-load-visited-links ()
   "Merge visited links on file with those in memory.
 This command tries to reread `hackernews-visited-links-file',
@@ -412,33 +435,15 @@ risks being overwritten next time Emacs is killed."
   (dolist (entry hackernews--visited-ids)
     (unless (cdr entry)
       (setcdr entry (make-hash-table))))
-  (when (and hackernews-visited-links-file
-             (file-exists-p hackernews-visited-links-file))
-    (condition-case err
-        (with-temp-buffer
-          (insert-file-contents hackernews-visited-links-file)
-          (dolist (entry (read (current-buffer)))
-            (let ((table (cdr (assq (car entry) hackernews--visited-ids))))
-              (maphash (lambda (k newv)
-                         (let ((oldv (gethash k table)))
-                           (when (or (not oldv)
-                                     (time-less-p
-                                      (plist-get oldv :last-visited)
-                                      (plist-get newv :last-visited)))
-                             (puthash k newv table))))
-                       (cdr entry)))))
-      (error
-       (lwarn 'hackernews :error
-              "Could not read `hackernews-visited-links-file':\n      %s%s"
-              (error-message-string err)
-              (substitute-command-keys "
-N.B.  Any valid data in the file will be overwritten next time
-      Emacs is killed.  To avoid data loss, type
-      \\[hackernews-load-visited-links] after fixing the error
-      above.
-      Alternatively, you can set `hackernews-visited-links-file'
-      to nil: the file will not be overwritten, but any links
-      visited in the current Emacs session will not be saved."))))))
+  (dolist (entry (hackernews--read-visited-links))
+    (let ((table (cdr (assq (car entry) hackernews--visited-ids))))
+      (maphash (lambda (k newv)
+                 (let ((oldv (gethash k table)))
+                   (when (or (not oldv)
+                             (time-less-p (plist-get oldv :last-visited)
+                                          (plist-get newv :last-visited)))
+                     (puthash k newv table))))
+               (cdr entry)))))
 
 (defun hackernews-save-visited-links ()
   "Write visited links to `hackernews-visited-links-file'."
