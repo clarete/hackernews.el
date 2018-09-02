@@ -394,13 +394,6 @@ N defaults to 1."
 
 ;;;; UI
 
-(defun hackernews--init-visited-links ()
-  "Set up tracking of visited links.
-Do nothing if `hackernews--visited-ids' is already initialized."
-  (unless (cdar hackernews--visited-ids)
-    (hackernews-load-visited-links)
-    (add-hook 'kill-emacs-hook #'hackernews-save-visited-links)))
-
 (defun hackernews--read-visited-links ()
   "Read and return contents of `hackernews-visited-links-file'.
 On error, display a warning for the user and return nil."
@@ -432,9 +425,11 @@ change and you want to update the hackernews display without
 restarting Emacs, or the file could not be read initially and
 risks being overwritten next time Emacs is killed."
   (interactive)
+  ;; Ensure `hackernews--visited-ids' is initialized
   (dolist (entry hackernews--visited-ids)
     (unless (cdr entry)
       (setcdr entry (make-hash-table))))
+  ;; Merge with `hackernews-visited-links-file'
   (dolist (entry (hackernews--read-visited-links))
     (let ((table (cdr (assq (car entry) hackernews--visited-ids))))
       (maphash (lambda (k newv)
@@ -459,20 +454,25 @@ risks being overwritten next time Emacs is killed."
                     "Could not write `hackernews-visited-links-file': %s"
                     (error-message-string err))))))
 
+(defun hackernews--init-visited-links ()
+  "Set up tracking of visited links.
+Do nothing if `hackernews--visited-ids' is already initialized."
+  (unless (cdar hackernews--visited-ids)
+    (hackernews-load-visited-links)
+    (add-hook 'kill-emacs-hook #'hackernews-save-visited-links)))
+
 (defun hackernews--visit (button fn)
   "Visit URL of BUTTON by passing it to FN."
   (let* ((id    (button-get button 'id))
          (type  (button-type button))
+         (stype (button-type-get type 'supertype))
          (vtype (button-type-get type 'hackernews-visited-type))
-         (table (cdr (or (assq type hackernews--visited-ids)
-                         (assq (button-type-get type 'supertype)
-                               hackernews--visited-ids))))
+         (table (cdr (or (assq  type hackernews--visited-ids)
+                         (assq stype hackernews--visited-ids))))
          (val   (gethash id table))
-         (time  (list :last-visited (current-time)))
+         (val   (plist-put val :last-visited (current-time)))
          (inhibit-read-only t))
-    (if val
-        (apply #'plist-put val time)    ; Update :last-visited
-      (puthash id time table))          ; Insert new entry
+    (puthash id val table)
     (and hackernews-show-visited-links
          (not (eq type vtype))
          (button-put button 'type vtype)))
