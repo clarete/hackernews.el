@@ -263,8 +263,9 @@ When nil, visited links are not persisted across sessions."
 (defvar hackernews-button-map
   (let ((map (make-sparse-keymap)))
     (set-keymap-parent map button-map)
-    (define-key map "t" #'hackernews-button-browse-internal)
+    (define-key map "R" #'hackernews-button-mark-as-unvisited)
     (define-key map "r" #'hackernews-button-mark-as-visited)
+    (define-key map "t" #'hackernews-button-browse-internal)
     map)
   "Keymap used on hackernews links.")
 
@@ -461,21 +462,26 @@ Do nothing if `hackernews--visited-ids' is already initialized."
     (hackernews-load-visited-links)
     (add-hook 'kill-emacs-hook #'hackernews-save-visited-links)))
 
-(defun hackernews--visit (button fn)
-  "Visit URL of BUTTON by passing it to FN."
+(defun hackernews--visit (button fn &optional unvisit)
+  "Visit URL of BUTTON by passing it to FN.
+If UNVISIT is non-nil, mark BUTTON as unvisited."
   (let* ((id    (button-get button 'id))
          (type  (button-type button))
          (stype (button-type-get type 'supertype))
          (vtype (button-type-get type 'hackernews-visited-type))
+         ;; New type
+         (ntype (cond (unvisit
+                       (and (eq type vtype) stype))
+                      (hackernews-show-visited-links
+                       (and (not (eq type vtype)) vtype))))
          (table (cdr (or (assq  type hackernews--visited-ids)
                          (assq stype hackernews--visited-ids))))
          (val   (gethash id table))
+         (val   (plist-put val :visited      (not unvisit)))
          (val   (plist-put val :last-visited (current-time)))
          (inhibit-read-only t))
     (puthash id val table)
-    (and hackernews-show-visited-links
-         (not (eq type vtype))
-         (button-put button 'type vtype)))
+    (when ntype (button-put button 'type ntype)))
   (funcall fn (button-get button 'shr-url)))
 
 (defun hackernews-browse-url-action (button)
@@ -494,13 +500,19 @@ which see."
   (interactive)
   (hackernews--visit (point) #'ignore))
 
+(defun hackernews-button-mark-as-unvisited ()
+  "Mark button under point as unvisited."
+  (interactive)
+  (hackernews--visit (point) #'ignore t))
+
 (defun hackernews--button-string (type label url id)
   "Return button string of TYPE pointing to URL with LABEL.
 Replace TYPE with the value of its `hackernews-visited-type'
 property if `hackernews-show-visited-links' is non-nil and a
 button with TYPE and ID is known to have been visited."
   (and hackernews-show-visited-links
-       (gethash id (cdr (assq type hackernews--visited-ids)))
+       (plist-get (gethash id (cdr (assq type hackernews--visited-ids)))
+                  :visited)
        (setq type (button-type-get type 'hackernews-visited-type)))
   (make-text-button label nil 'type type 'help-echo url 'shr-url url 'id id)
   label)
