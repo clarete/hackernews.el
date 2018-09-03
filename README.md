@@ -42,6 +42,7 @@ with comments.
 | <kbd>RET</kbd>   | Open link in default (external) browser      |
 | <kbd>t</kbd>     | Open link in text-based browser within Emacs |
 | <kbd>r</kbd>     | Mark link as visited.                        |
+| <kbd>R</kbd>     | Mark link as unvisited.                      |
 | <kbd>n</kbd>     | Move to next title link                      |
 | <kbd>p</kbd>     | Move to previous title link                  |
 | <kbd>TAB</kbd>   | Move to next comments count link             |
