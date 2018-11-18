@@ -1,5 +1,8 @@
 # Simple Hacker News Emacs Client
 
+[![MELPA](https://melpa.org/packages/hackernews-badge.svg)](https://melpa.org/#/hackernews)
+[![MELPA Stable](https://stable.melpa.org/packages/hackernews-badge.svg)](https://stable.melpa.org/#/hackernews)
+
 It's simple because it doesn't actually interact with [Hacker
 News](https://news.ycombinator.com/).  It uses a HTTP
 [API](https://hacker-news.firebaseio.com/v0) to get the data.
@@ -66,21 +69,38 @@ prefix argument, the value of the user option
 
 ## Installation
 
-### Using built-in package manager
+### Using the built-in package manager
 
 Those who like the built-in package manager `package.el` need only
-point it to the Marmalade repository, which can be achieved by adding
-the following code to your `user-init-file`:
+point it to a [MELPA](https://melpa.org) repository, which can be
+achieved by adding the following code to your `user-init-file`:
 
 ```el
 (require 'package)
-(add-to-list 'package-archives
-             '("marmalade" .
-               "http://marmalade-repo.org/packages/"))
+(add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/"))
 (package-initialize)
 ```
 
-Then you can run
+Note that this will follow the bleeding edge of `hackernews`
+development.  Though `hackernews` contributors make every effort to
+keep the latest snapshot usable and bug-free, to err is human.  If
+this thought scares you, a more stable experience can be achieved by
+replacing:
+
+```el
+'("melpa" . "https://melpa.org/packages/")
+```
+
+in the example above with:
+
+```el
+'("melpa-stable" . "https://stable.melpa.org/packages/")
+```
+
+or equivalent.  See https://melpa.org/#/getting-started for more on
+this.
+
+Once `package.el` is configured, you can run
 <kbd>M-x</kbd>`package-install`<kbd>RET</kbd>`hackernews`<kbd>RET</kbd>.
 
 ### Manual download
