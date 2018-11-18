@@ -44,8 +44,8 @@ with comments.
 |------------------|----------------------------------------------|
 | <kbd>RET</kbd>   | Open link in default (external) browser      |
 | <kbd>t</kbd>     | Open link in text-based browser within Emacs |
-| <kbd>r</kbd>     | Mark link as visited.                        |
-| <kbd>R</kbd>     | Mark link as unvisited.                      |
+| <kbd>r</kbd>     | Mark link as visited                         |
+| <kbd>R</kbd>     | Mark link as unvisited                       |
 | <kbd>n</kbd>     | Move to next title link                      |
 | <kbd>p</kbd>     | Move to previous title link                  |
 | <kbd>TAB</kbd>   | Move to next comments count link             |
@@ -97,7 +97,7 @@ in the example above with:
 '("melpa-stable" . "https://stable.melpa.org/packages/")
 ```
 
-or equivalent.  See https://melpa.org/#/getting-started for more on
+or equivalent.  See https://melpa.org/#/getting-started/ for more on
 this.
 
 Once `package.el` is configured, you can run
@@ -128,7 +128,7 @@ command for each supported feed is also supported, e.g.
 <kbd>M-x</kbd>`hackernews-top-stories`<kbd>RET</kbd> or
 <kbd>M-x</kbd>`hackernews-ask-stories`<kbd>RET</kbd>.  These direct
 commands are not autoloaded, however, so to use them before
-`hackernews` has been loaded you should autoload them yourself, e.g.
+`hackernews` has been loaded, you should autoload them yourself, e.g.
 by adding the following to your `user-init-file`:
 
 ```el
