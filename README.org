@@ -1,0 +1,181 @@
+#+TITLE: Simple Hacker News Emacs Client
+
+[[https://melpa.org/#/hackernews][https://melpa.org/packages/hackernews-badge.svg]]
+[[https://stable.melpa.org/#/hackernews][https://stable.melpa.org/packages/hackernews-badge.svg]]
+
+It's simple because it doesn't actually interact with [[https://news.ycombinator.com/][Hacker News]].
+It uses a HTTP [[https://hacker-news.firebaseio.com/v0][API]] to get the data.
+
+* Interface
+
+Version 0.4.0 of the =hackernews= package is able to fetch stories
+from six different Hacker News feeds, namely top, new, best, ask, show
+and job stories.  The default feed is top stories, which corresponds
+to the Hacker News homepage.
+
+The score, title, and comments count of each story is presented on a
+line of its own (see screenshot below), though this format is
+customizable.  Both the title and comments count strings are
+hyperlinked to the Hacker News page for the item (the one with the
+comments), unless the story links to an external page, in which case
+the title is hyperlinked to that instead.
+
+Clicking or typing =RET= on a link opens it with the command
+[[https://www.gnu.org/software/emacs/manual/html_node/emacs/Browse_002dURL.html][~browse-url~]], which selects a browser based on the user option
+~browse-url-browser-function~.  This defaults to the system's default
+browser.
+
+Typing =t= on a link first tries to open it in [[https://www.gnu.org/software/emacs/manual/html_node/eww/index.html][~eww~]], if
+available, and otherwise passes it to the command
+~browse-url-text-emacs~, which consults the user option
+~browse-url-text-browser~.  This defaults to running =lynx= within
+Emacs.  Keep in mind that some websites do not render well in text
+mode.
+
+A future =hackernews= version may support upvoting and interacting
+with comments.
+
+** Keymap
+
+| Key     | Description                                  |
+|---------+----------------------------------------------|
+| =RET=   | Open link in default (external) browser      |
+| =t=     | Open link in text-based browser within Emacs |
+| =r=     | Mark link as visited                         |
+| =R=     | Mark link as unvisited                       |
+| =n=     | Move to next title link                      |
+| =p=     | Move to previous title link                  |
+| =TAB=   | Move to next comments count link             |
+| =S-TAB= | Move to previous comments count link         |
+| =m=     | Load more stories                            |
+| =g=     | Reload stories                               |
+| =f=     | Prompt user for a feed to switch to          |
+| =q=     | Quit                                         |
+
+All feed re/loading commands accept an optional [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Arguments.html][numeric prefix
+ argument]] denoting how many stories to act on.  For example, =M-5 0 g=
+ refreshes the feed of the current =hackernews= buffer and fetches its
+ top 50 stories.  With no prefix argument, the value of the user
+ option ~hackernews-items-per-page~ is used instead.
+
+* Screenshot
+
+[[https://raw.github.com/clarete/hackernews.el/master/Screenshot.png]]
+
+* Installation
+
+** Using the built-in package manager
+
+Those who like the built-in package manager =package.el= need only
+point it to a [[https://melpa.org][MELPA]] repository, which can be achieved by adding the
+following code to your ~user-init-file~:
+
+#+BEGIN_SRC emacs-lisp
+  (require 'package)
+  (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/"))
+  (package-initialize)
+#+END_SRC
+
+Note that this will follow the bleeding edge of =hackernews=
+development.  Though =hackernews= contributors make every effort to
+keep the latest snapshot usable and bug-free, to err is human.  If
+this thought scares you, a more stable experience can be achieved by
+replacing:
+
+#+BEGIN_SRC emacs-lisp
+  '("melpa" . "https://melpa.org/packages/")
+#+END_SRC
+
+in the example above with:
+
+#+BEGIN_SRC emacs-lisp
+  '("melpa-stable" . "https://stable.melpa.org/packages/")
+#+END_SRC
+
+or equivalent.  See <https://melpa.org/#/getting-started> for more on
+this.
+
+Once =package.el= is configured, you can run =M-x package-install RET
+hackernews RET=.
+
+** Manual download
+
+Place the =hackernews.el= file into a directory on your ~load-path~
+and add the following code to your ~user-init-file~:
+
+#+BEGIN_SRC emacs-lisp
+  (autoload 'hackernews "hackernews" nil t)
+#+END_SRC
+
+Alternatively, if you always want the package loaded at startup (this
+slows down startup):
+
+#+BEGIN_SRC emacs-lisp
+  (require 'hackernews)
+#+END_SRC
+
+* Usage
+
+Just run =M-x hackernews RET=.  This reads the feed specified by the
+user option ~hackernews-default-feed~, which defaults to top stories,
+i.e. the Hacker News homepage.  A direct command for each supported
+feed is also supported, e.g.  =M-x hackernews-top-stories RET= or =M-x
+hackernews-ask-stories RET=.  These direct commands are not
+autoloaded, however, so to use them before =hackernews= has been
+loaded, you should autoload them yourself, e.g. by adding the
+following to your ~user-init-file~:
+
+#+BEGIN_SRC emacs-lisp
+  (autoload 'hackernews-ask-stories "hackernews" nil t)
+#+END_SRC
+
+** Customization
+
+You can list and modify all custom faces and variables by typing =M-x
+customize-group RET hackernews RET=.
+
+All =hackernews= buffers are displayed using the ~pop-to-buffer~
+function for increased compatibility and customizability in how
+windows and frames are re/used.  This function displays buffers in a
+new window by default.  The simplest way to instead reuse the current
+window for =hackernews= buffers is to customize one of the user
+options ~same-window-buffer-names~, ~same-window-regexp~ or in Emacs
+24 and subsequent versions, ~display-buffer-alist~ via =M-x
+customize-group RET windows RET=.
+
+If you prefer to roll out your own Elisp, you could add to your
+~user-init-file~ something as simple as:
+
+#+BEGIN_SRC emacs-lisp
+  (add-to-list 'same-window-regexps "\\`\\*hackernews .*\\*\\'")
+#+END_SRC
+
+** Troubleshooting
+
+In general, errors and misbehavior pertaining to network retrieval and
+JSON parsing are probably due to bugs in older Emacsen.  The minimum
+recommended Emacs version for =hackernews= is 25.  Emacs 24 should
+work, but suffers from network security vulnerabilities that were
+fixed in version 25.  Emacs 23 is no longer officially supported as of
+[[https://github.com/clarete/hackernews.el/issues/46][2018-06-08]].
+
+In any case, please report any problems on the project's [[https://github.com/clarete/hackernews.el/issues][issue
+tracker]], so that the possibility for mitigation can be investigated.
+
+* License
+
+Copyright (C) 2012-2018 The Hackernews.el Authors
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or (at
+your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
