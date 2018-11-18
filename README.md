@@ -1,5 +1,8 @@
 # Simple Hacker News Emacs Client
 
+[![MELPA](https://melpa.org/packages/hackernews-badge.svg)](https://melpa.org/#/hackernews)
+[![MELPA Stable](https://stable.melpa.org/packages/hackernews-badge.svg)](https://stable.melpa.org/#/hackernews)
+
 It's simple because it doesn't actually interact with [Hacker
 News](https://news.ycombinator.com/).  It uses a HTTP
 [API](https://hacker-news.firebaseio.com/v0) to get the data.
