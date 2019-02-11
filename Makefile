@@ -4,13 +4,17 @@ VERSION ?= git
 TARGET   = $(PACKAGE)-$(VERSION)
 RM      ?= rm -f
 
+%.elc: %.el
+	$(EMACS) --quick --batch --funcall=batch-byte-compile $<
+
+all: lisp
+
 help:
 	$(info Available options)
 	$(info - package : Create a tar archive)
 	$(info - clean   : Clean the build directory)
 	$(info - emacs-Q : Launch emacs -Q with Hackernews loaded)
-
-all: package
+	$(info - lisp    : Byte-compile Elisp sources)
 
 package:
 	mkdir -p $(TARGET)
@@ -21,5 +25,7 @@ package:
 emacs-Q:
 	$(EMACS) --quick --load=$(PACKAGE).el
 
+lisp: $(PACKAGE).elc
+
 clean:
-	$(RM) $(PACKAGE)-*.tar
+	$(RM) $(PACKAGE).elc $(PACKAGE)-*.tar
