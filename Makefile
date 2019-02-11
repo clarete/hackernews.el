@@ -1,20 +1,28 @@
-PACKAGE  = hackernews
-VERSION ?= git
-TARGET   = $(PACKAGE)-$(VERSION)
+EMACS   ?= emacs
+PACKAGE := hackernews
 RM      ?= rm -f
 
+%.elc: %.el
+	$(EMACS) --quick --batch --funcall=batch-byte-compile $<
+
+all: lisp
+
+.PHONY: help
 help:
-	$(info Available options)
-	$(info - package : Create a tar archive)
-	$(info - clean   : Clean the build directory)
+	$(info Available targets)
+	$(info )
+	$(info [all]     Same as 'lisp' (default))
+	$(info clean     Clean the build directory)
+	$(info emacs-Q   Launch emacs -Q with Hackernews loaded)
+	$(info lisp      Byte-compile Elisp sources)
+	@:
 
-all: package
+.PHONY: emacs-Q
+emacs-Q:
+	$(EMACS) --quick --load=$(PACKAGE).el
 
-package:
-	mkdir -p $(TARGET)
-	cp hackernews.el hackernews-pkg.el README.md Screenshot.png COPYING $(TARGET)
-	tar cf $(TARGET).tar $(TARGET)
-	$(RM) -r $(TARGET)
+lisp: $(PACKAGE).elc
 
+.PHONY: clean
 clean:
-	$(RM) $(PACKAGE)-*.tar
+	$(RM) $(PACKAGE).elc
