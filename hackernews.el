@@ -32,7 +32,6 @@
 (require 'browse-url)
 (require 'cus-edit)
 (require 'format-spec)
-(require 'json)
 (require 'url)
 
 (defgroup hackernews nil
@@ -623,9 +622,13 @@ Official major mode key bindings:
   (if (fboundp 'json-parse-buffer)
       (lambda ()
         (json-parse-buffer :object-type 'alist))
+    (require 'json)
+    (defvar json-array-type)
+    (defvar json-object-type)
+    (declare-function json-read "json")
     (lambda ()
-      (let ((json-object-type 'alist)
-            (json-array-type  'vector))
+      (let ((json-array-type  'vector)
+            (json-object-type 'alist))
         (json-read))))
   "Read JSON object from current buffer starting at point.
 Objects are decoded as alists and arrays as vectors.")
