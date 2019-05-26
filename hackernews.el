@@ -270,28 +270,24 @@ When nil, visited links are not persisted across sessions."
 
 (define-button-type 'hackernews-link
   'action                  #'hackernews-browse-url-action
-  'face                    'hackernews-link
   'follow-link             t
-  'hackernews-visited-type 'hackernews-link-visited
+  'hackernews-face         'hackernews-link
+  'hackernews-visited-face 'hackernews-link-visited
   'keymap                  hackernews-button-map)
 
-(define-button-type 'hackernews-link-visited
-  'face      'hackernews-link-visited
-  'supertype 'hackernews-link)
-
 (define-button-type 'hackernews-comment-count
-  'face                    'hackernews-comment-count
-  'hackernews-visited-type 'hackernews-comment-count-visited
+  'hackernews-face         'hackernews-comment-count
+  'hackernews-visited-face 'hackernews-comment-count-visited
   'supertype               'hackernews-link)
+
+;; Use `font-lock-face' on creation instead.
+(button-type-put 'hackernews-link          'face nil)
+(button-type-put 'hackernews-comment-count 'face nil)
 
 ;; Remove `hackernews-link' as `supertype' so that
 ;; `hackernews--forward-button' can distinguish between
 ;; `hackernews-link' and `hackernews-comment-count'.
 (button-type-put 'hackernews-comment-count 'supertype 'button)
-
-(define-button-type 'hackernews-comment-count-visited
-  'face      'hackernews-comment-count-visited
-  'supertype 'hackernews-comment-count)
 
 (defvar hackernews--visited-ids
   (mapcar #'list '(hackernews-link hackernews-comment-count))
@@ -466,21 +462,17 @@ Do nothing if `hackernews--visited-ids' is already initialized."
 If UNVISIT is non-nil, mark BUTTON as unvisited."
   (let* ((id    (button-get button 'id))
          (type  (button-type button))
-         (stype (button-type-get type 'supertype))
-         (vtype (button-type-get type 'hackernews-visited-type))
-         ;; New type
-         (ntype (cond (unvisit
-                       (and (eq type vtype) stype))
+         (face  (cond (unvisit 'hackernews-face)
                       (hackernews-show-visited-links
-                       (and (not (eq type vtype)) vtype))))
-         (table (cdr (or (assq  type hackernews--visited-ids)
-                         (assq stype hackernews--visited-ids))))
+                       'hackernews-visited-face)))
+         (table (cdr (assq type hackernews--visited-ids)))
          (val   (gethash id table))
          (val   (plist-put val :visited      (not unvisit)))
          (val   (plist-put val :last-visited (current-time)))
          (inhibit-read-only t))
     (puthash id val table)
-    (when ntype (button-put button 'type ntype)))
+    (when face
+      (button-put button 'font-lock-face (button-type-get type face))))
   (funcall fn (button-get button 'shr-url)))
 
 (defun hackernews-browse-url-action (button)
@@ -505,15 +497,15 @@ which see."
   (hackernews--visit (point) #'ignore t))
 
 (defun hackernews--button-string (type label url id)
-  "Return button string of TYPE pointing to URL with LABEL.
-Replace TYPE with the value of its `hackernews-visited-type'
-property if `hackernews-show-visited-links' is non-nil and a
-button with TYPE and ID is known to have been visited."
-  (and hackernews-show-visited-links
-       (plist-get (gethash id (cdr (assq type hackernews--visited-ids)))
-                  :visited)
-       (setq type (button-type-get type 'hackernews-visited-type)))
-  (make-text-button label nil 'type type 'help-echo url 'shr-url url 'id id)
+  "Make LABEL a text button of TYPE for item ID and URL."
+  (let* ((props (and hackernews-show-visited-links
+                     (gethash id (cdr (assq type hackernews--visited-ids)))))
+         (face  (button-type-get type (if (plist-get props :visited)
+                                          'hackernews-visited-face
+                                        'hackernews-face))))
+    (make-text-button label nil
+                      'type type 'font-lock-face face
+                      'id id 'help-echo url 'shr-url url))
   label)
 
 (defun hackernews--render-item (item)
@@ -535,7 +527,7 @@ their respective URLs."
      (format-spec hackernews-item-format
                   (format-spec-make
                    ?s (propertize (format hackernews-score-format score)
-                                  'face 'hackernews-score)
+                                  'font-lock-face 'hackernews-score)
                    ?t (hackernews--button-string
                        'hackernews-link
                        (format hackernews-title-format title)
