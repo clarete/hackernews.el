@@ -298,7 +298,7 @@ When nil, visited links are not persisted across sessions."
   "Map link button types to their visited ID sets.
 Values are initially nil and later replaced with a hash table.")
 
-;; Emulate `define-error' for Emacs < 24.4
+;; Emulate `define-error' for Emacs < 24.4.
 (put 'hackernews-error 'error-conditions '(hackernews-error error))
 (put 'hackernews-error 'error-message    "Hackernews error")
 
@@ -712,10 +712,10 @@ and N defaults to `hackernews-items-per-page'."
 N defaults to `hackernews-items-per-page'."
   (interactive "P")
   (hackernews--ensure-major-mode)
-  (let ((feed (hackernews--get :feed)))
-    (if feed
-        (hackernews--load-stories feed n)
-      (signal 'hackernews-error '("Buffer unassociated with feed")))))
+  (hackernews--load-stories
+   (or (hackernews--get :feed)
+       (signal 'hackernews-error '("Buffer unassociated with feed")))
+   n))
 
 (defun hackernews-load-more-stories (&optional n)
   "Load N more stories into hackernews buffer.
