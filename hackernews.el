@@ -293,8 +293,8 @@ When nil, visited links are not persisted across sessions."
   'face      'hackernews-comment-count-visited
   'supertype 'hackernews-comment-count)
 
-(defvar hackernews--visited-ids '((hackernews-link)
-                                  (hackernews-comment-count))
+(defvar hackernews--visited-ids
+  (mapcar #'list '(hackernews-link hackernews-comment-count))
   "Map link button types to their visited ID sets.
 Values are initially nil and later replaced with a hash table.")
 
