@@ -496,6 +496,20 @@ which see."
   (interactive)
   (hackernews--visit (point) #'ignore t))
 
+(defalias 'hackernews--text-button
+  ;; Emacs 24.4 was the first to return BEG when it's a string, so
+  ;; earlier versions can't return the result of `make-text-button'.
+  ;; Emacs 28.1 started modifying a copy of BEG when it's a string, so
+  ;; subsequent versions must return the result of `make-text-button'.
+  (if (version< "24.3" emacs-version)
+      #'make-text-button
+    (lambda (beg end &rest properties)
+      (apply #'make-text-button beg end properties)
+      beg))
+  "Like `make-text-button', but always return BEG.
+This is for compatibility with various Emacs versions.
+\n(fn BEG END &rest PROPERTIES)")
+
 (defun hackernews--button-string (type label url id)
   "Make LABEL a text button of TYPE for item ID and URL."
   (let* ((props (and hackernews-show-visited-links
@@ -503,10 +517,9 @@ which see."
          (face  (button-type-get type (if (plist-get props :visited)
                                           'hackernews-visited-face
                                         'hackernews-face))))
-    (make-text-button label nil
-                      'type type 'font-lock-face face
-                      'id id 'help-echo url 'shr-url url))
-  label)
+    (hackernews--text-button label nil
+                             'type type 'font-lock-face face
+                             'id id 'help-echo url 'shr-url url)))
 
 (defun hackernews--render-item (item)
   "Render Hacker News ITEM in current buffer.
