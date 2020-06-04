@@ -538,19 +538,19 @@ their respective URLs."
          (comments-url (hackernews--comments-url id)))
     (insert
      (format-spec hackernews-item-format
-                  (format-spec-make
-                   ?s (propertize (format hackernews-score-format score)
-                                  'font-lock-face 'hackernews-score)
-                   ?t (hackernews--button-string
-                       'hackernews-link
-                       (format hackernews-title-format title)
-                       (or item-url comments-url)
-                       id)
-                   ?c (hackernews--button-string
-                       'hackernews-comment-count
-                       (format hackernews-comments-format (or descendants 0))
-                       comments-url
-                       id))))))
+                  `((?s . ,(propertize (format hackernews-score-format score)
+                                       'font-lock-face 'hackernews-score))
+                    (?t . ,(hackernews--button-string
+                            'hackernews-link
+                            (format hackernews-title-format title)
+                            (or item-url comments-url)
+                            id))
+                    (?c . ,(hackernews--button-string
+                            'hackernews-comment-count
+                            (format hackernews-comments-format
+                                    (or descendants 0))
+                            comments-url
+                            id)))))))
 
 (defun hackernews--display-items ()
   "Render items associated with, and pop to, the current buffer."
