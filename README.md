@@ -9,7 +9,7 @@ News](https://news.ycombinator.com/).  It uses a HTTP
 
 ## Interface
 
-Version 0.5.0 of the `hackernews` package is able to fetch stories
+Version 0.6.0 of the `hackernews` package is able to fetch stories
 from six different Hacker News feeds, namely top, new, best, ask, show
 and job stories.  The default feed is top stories, which corresponds
 to the Hacker News homepage.
@@ -171,7 +171,7 @@ possibility for mitigation can be investigated.
 
 ## License
 
-Copyright (C) 2012-2019 The Hackernews.el Authors
+Copyright (C) 2012-2020 The Hackernews.el Authors
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

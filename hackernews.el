@@ -1,11 +1,11 @@
 ;;; hackernews.el --- Hacker News Client for Emacs -*- lexical-binding: t -*-
 
-;; Copyright (C) 2012-2019 The Hackernews.el Authors
+;; Copyright (C) 2012-2020 The Hackernews.el Authors
 
 ;; Author: Lincoln de Sousa <lincoln@comum.org>
 ;; Maintainer: Basil L. Contovounesios <contovob@tcd.ie>
 ;; Keywords: comm hypermedia news
-;; Version: 0.5.0
+;; Version: 0.6.0
 ;; Homepage: https://github.com/clarete/hackernews.el
 
 ;; This program is free software; you can redistribute it and/or modify
