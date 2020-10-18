@@ -736,6 +736,13 @@ N defaults to `hackernews-items-per-page'."
 End of feed; type \\[hackernews-reload] to load new items."))
       (hackernews--load-stories feed n reg))))
 
+(defalias 'hackernews--prompt
+  (if (fboundp 'format-prompt)
+      #'format-prompt
+    (lambda (prompt default)
+      (format "%s (default %s): " prompt default)))
+  "Compatibility shim for `format-prompt' in Emacs < 28.")
+
 (defun hackernews-switch-feed (&optional n)
   "Read top N Hacker News stories from a different feed.
 The Hacker News feed is determined by the user with completion
@@ -745,7 +752,7 @@ and N defaults to `hackernews-items-per-page'."
    (let ((completion-extra-properties
           (list :annotation-function #'hackernews--feed-annotation)))
      (completing-read
-      (format "Hacker News feed (default %s): " hackernews-default-feed)
+      (hackernews--prompt "Hacker News feed" hackernews-default-feed)
       hackernews-feed-names nil t nil 'hackernews-feed-history
       hackernews-default-feed))
    n))
