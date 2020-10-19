@@ -741,7 +741,8 @@ End of feed; type \\[hackernews-reload] to load new items."))
       #'format-prompt
     (lambda (prompt default)
       (format "%s (default %s): " prompt default)))
-  "Compatibility shim for `format-prompt' in Emacs < 28.")
+  "Compatibility shim for `format-prompt' in Emacs < 28.
+\n(fn PROMPT DEFAULT)")
 
 (defun hackernews-switch-feed (&optional n)
   "Read top N Hacker News stories from a different feed.
