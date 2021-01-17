@@ -9,7 +9,7 @@ News](https://news.ycombinator.com/).  It uses a HTTP
 
 ## Interface
 
-Version 0.6.0 of the `hackernews` package is able to fetch stories
+Version 0.6.1 of the `hackernews` package is able to fetch stories
 from six different Hacker News feeds, namely top, new, best, ask, show
 and job stories.  The default feed is top stories, which corresponds
 to the Hacker News homepage.
@@ -22,13 +22,13 @@ comments), unless the story links to an external page, in which case
 the title is hyperlinked to that instead.
 
 Clicking or typing <kbd>RET</kbd> on a link opens it with the command
-[`browse-url`](https://www.gnu.org/software/emacs/manual/html_node/emacs/Browse_002dURL.html),
+[`browse-url`](https://gnu.org/software/emacs/manual/html_node/emacs/Browse_002dURL.html),
 which selects a browser based on the user option
 `browse-url-browser-function`.  This defaults to the system's default
 browser.
 
 Typing <kbd>t</kbd> on a link first tries to open it in
-[`eww`](https://www.gnu.org/software/emacs/manual/html_node/eww/index.html),
+[`eww`](https://gnu.org/software/emacs/manual/html_node/eww/index.html),
 if available, and otherwise passes it to the command
 `browse-url-text-emacs`, which consults the user option
 `browse-url-text-browser`.  This defaults to running `lynx` within
@@ -56,7 +56,7 @@ with comments.
 | <kbd>q</kbd>     | Quit                                         |
 
 All feed re/loading commands accept an optional [numeric prefix
-argument](https://www.gnu.org/software/emacs/manual/html_node/emacs/Arguments.html)
+argument](https://gnu.org/software/emacs/manual/html_node/emacs/Arguments.html)
 denoting how many stories to act on.  For example,
 <kbd>M-5</kbd><kbd>0</kbd><kbd>g</kbd> refreshes the feed of the
 current `hackernews` buffer and fetches its top 50 stories.  With no
@@ -171,7 +171,7 @@ possibility for mitigation can be investigated.
 
 ## License
 
-Copyright (C) 2012-2020 The Hackernews.el Authors
+Copyright (C) 2012-2021 The Hackernews.el Authors
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
