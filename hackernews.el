@@ -521,6 +521,8 @@ This is for compatibility with various Emacs versions.
                              'type type 'font-lock-face face
                              'id id 'help-echo url 'shr-url url)))
 
+(autoload 'xml-substitute-special "xml")
+
 (defun hackernews--render-item (item)
   "Render Hacker News ITEM in current buffer.
 The user options `hackernews-score-format',
@@ -536,6 +538,7 @@ their respective URLs."
          (item-url     (cdr (assq 'url         item)))
          (descendants  (cdr (assq 'descendants item)))
          (comments-url (hackernews--comments-url id)))
+    (setq title (xml-substitute-special title))
     (insert
      (format-spec hackernews-item-format
                   `((?s . ,(propertize (format hackernews-score-format score)
