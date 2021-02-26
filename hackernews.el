@@ -360,6 +360,7 @@ This is intended as an :annotation-function in
 (defun hackernews-next-item (&optional n)
   "Move to Nth next story link (previous if N is negative).
 N defaults to 1."
+  (declare (modes hackernews-mode))
   (interactive "p")
   ;; N is kept optional for backward compatibility
   (hackernews--forward-button (or n 1) 'hackernews-link))
@@ -373,17 +374,20 @@ N defaults to 1."
 (defun hackernews-next-comment (&optional n)
   "Move to Nth next comments link (previous if N is negative).
 N defaults to 1."
+  (declare (modes hackernews-mode))
   (interactive "p")
   (hackernews--forward-button (or n 1) 'hackernews-comment-count))
 
 (defun hackernews-previous-comment (&optional n)
   "Move to Nth previous comments link (next if N is negative).
 N defaults to 1."
+  (declare (modes hackernews-mode))
   (interactive "p")
   (hackernews-next-comment (- (or n 1))))
 
 (defun hackernews-first-item ()
   "Move point to first story link in hackernews buffer."
+  (declare (modes hackernews-mode))
   (interactive)
   (goto-char (point-min))
   (hackernews-next-item))
@@ -483,16 +487,19 @@ If UNVISIT is non-nil, mark BUTTON as unvisited."
   "Open URL of button under point within Emacs.
 The URL is passed to `hackernews-internal-browser-function',
 which see."
+  (declare (modes hackernews-mode))
   (interactive)
   (hackernews--visit (point) hackernews-internal-browser-function))
 
 (defun hackernews-button-mark-as-visited ()
   "Mark button under point as visited."
+  (declare (modes hackernews-mode))
   (interactive)
   (hackernews--visit (point) #'ignore))
 
 (defun hackernews-button-mark-as-unvisited ()
   "Mark button under point as unvisited."
+  (declare (modes hackernews-mode))
   (interactive)
   (hackernews--visit (point) #'ignore t))
 
@@ -615,6 +622,7 @@ Official major mode key bindings:
 
 \\{hackernews-mode-map}"
   :group 'hackernews
+  :interactive nil
   (setq hackernews--feed-state ())
   (setq truncate-lines t)
   (buffer-disable-undo))
@@ -718,6 +726,7 @@ and N defaults to `hackernews-items-per-page'."
 (defun hackernews-reload (&optional n)
   "Reload top N Hacker News stories from current feed.
 N defaults to `hackernews-items-per-page'."
+  (declare (modes hackernews-mode))
   (interactive "P")
   (hackernews--ensure-major-mode)
   (hackernews--load-stories
@@ -728,6 +737,7 @@ N defaults to `hackernews-items-per-page'."
 (defun hackernews-load-more-stories (&optional n)
   "Load N more stories into hackernews buffer.
 N defaults to `hackernews-items-per-page'."
+  (declare (modes hackernews-mode))
   (interactive "P")
   (hackernews--ensure-major-mode)
   (let ((feed (hackernews--get :feed))
