@@ -153,7 +153,8 @@ If you prefer to roll out your own Elisp, you could add to your
 `user-init-file` something as simple as:
 
 ```el
-(add-to-list 'same-window-regexps "\\`\\*hackernews .*\\*\\'")
+(push '("\\`\\*hackernews .*\\*\\'" (display-buffer-same-window))
+      display-buffer-alist)
 ```
 
 ### Troubleshooting
