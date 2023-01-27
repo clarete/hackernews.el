@@ -1,6 +1,6 @@
 ;;; hackernews.el --- Hacker News Client for Emacs -*- lexical-binding: t -*-
 
-;; Copyright (C) 2012-2021 The Hackernews.el Authors
+;; Copyright (C) 2012-2023 The Hackernews.el Authors
 
 ;; Author: Lincoln de Sousa <lincoln@comum.org>
 ;; Maintainer: Basil L. Contovounesios <contovob@tcd.ie>
