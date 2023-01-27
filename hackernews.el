@@ -47,14 +47,12 @@
 (defface hackernews-link
   '((t :inherit link :underline nil))
   "Face used for links to stories."
-  :package-version '(hackernews . "0.4.0")
-  :group 'hackernews)
+  :package-version '(hackernews . "0.4.0"))
 
 (defface hackernews-link-visited
   '((t :inherit link-visited :underline nil))
   "Face used for visited links to stories."
-  :package-version '(hackernews . "0.5.0")
-  :group 'hackernews)
+  :package-version '(hackernews . "0.5.0"))
 
 (define-obsolete-face-alias 'hackernews-comment-count-face
   'hackernews-comment-count "0.4.0")
@@ -62,14 +60,12 @@
 (defface hackernews-comment-count
   '((t :inherit hackernews-link))
   "Face used for comment counts."
-  :package-version '(hackernews . "0.4.0")
-  :group 'hackernews)
+  :package-version '(hackernews . "0.4.0"))
 
 (defface hackernews-comment-count-visited
   '((t :inherit hackernews-link-visited))
   "Face used for visited comment counts."
-  :package-version '(hackernews . "0.5.0")
-  :group 'hackernews)
+  :package-version '(hackernews . "0.5.0"))
 
 (define-obsolete-face-alias 'hackernews-score-face
   'hackernews-score "0.4.0")
@@ -77,8 +73,7 @@
 (defface hackernews-score
   '((t :inherit default))
   "Face used for the score of a story."
-  :package-version '(hackernews . "0.4.0")
-  :group 'hackernews)
+  :package-version '(hackernews . "0.4.0"))
 
 ;;;; User options
 
@@ -88,7 +83,6 @@
 (defcustom hackernews-items-per-page 20
   "Default number of stories to retrieve in one go."
   :package-version '(hackernews . "0.4.0")
-  :group 'hackernews
   :type 'integer)
 
 (defvar hackernews-feed-names
@@ -107,7 +101,6 @@
   "Default story feed to load.
 See `hackernews-feed-names' for supported feed types."
   :package-version '(hackernews . "0.4.0")
-  :group 'hackernews
   :type (cons 'choice (mapcar (lambda (feed)
                                 (list 'const :tag (cdr feed) (car feed)))
                               hackernews-feed-names)))
@@ -123,7 +116,6 @@ arguments to `format-spec':
 %t - Item title;    see `hackernews-title-format'.
 %c - Item comments; see `hackernews-comments-format'."
   :package-version '(hackernews . "0.4.0")
-  :group 'hackernews
   :type 'string)
 
 (defcustom hackernews-score-format "[%s]"
@@ -131,7 +123,6 @@ arguments to `format-spec':
 The result is obtained by passing this string and the score count
 to `format'."
   :package-version '(hackernews . "0.4.0")
-  :group 'hackernews
   :type 'string)
 
 (defcustom hackernews-title-format "%s"
@@ -139,7 +130,6 @@ to `format'."
 The result is obtained by passing this string and the title to
 `format'."
   :package-version '(hackernews . "0.4.0")
-  :group 'hackernews
   :type 'string)
 
 (defcustom hackernews-comments-format "(%s comments)"
@@ -147,27 +137,23 @@ The result is obtained by passing this string and the title to
 The result is obtained by passing this string and the comments
 count to `format'."
   :package-version '(hackernews . "0.4.0")
-  :group 'hackernews
   :type 'string)
 
 (defcustom hackernews-preserve-point t
   "Whether to preserve point when loading more stories.
 When nil, point is placed on first new item retrieved."
   :package-version '(hackernews . "0.4.0")
-  :group 'hackernews
   :type 'boolean)
 
 (defcustom hackernews-before-render-hook ()
   "Hook called before rendering any new items."
   :package-version '(hackernews . "0.4.0")
-  :group 'hackernews
   :type 'hook)
 
 (defcustom hackernews-after-render-hook ()
   "Hook called after rendering any new items.
 The position of point will not have been affected by the render."
   :package-version '(hackernews . "0.4.0")
-  :group 'hackernews
   :type 'hook)
 
 (defcustom hackernews-finalize-hook ()
@@ -176,7 +162,6 @@ The position of point may have been adjusted after the render,
 buffer-local feed state will have been updated and the hackernews
 buffer will be current and displayed in the selected window."
   :package-version '(hackernews . "0.4.0")
-  :group 'hackernews
   :type 'hook)
 
 (defcustom hackernews-suppress-url-status t
@@ -186,7 +171,6 @@ messages are displayed when retrieving online data.  This is
 suppressed by default so that the hackernews progress reporter is
 not interrupted."
   :package-version '(hackernews . "0.4.0")
-  :group 'hackernews
   :type 'boolean)
 
 (defcustom hackernews-internal-browser-function
@@ -196,7 +180,6 @@ not interrupted."
   "Function to load a given URL within Emacs.
 See `browse-url-browser-function' for some possible options."
   :package-version '(hackernews . "0.4.0")
-  :group 'hackernews
   :type (cons 'radio (butlast (cdr (custom-variable-type
                                     'browse-url-browser-function)))))
 
@@ -206,7 +189,6 @@ For example, when a link with the `hackernews-link' face is
 visited and the value of this variable is non-nil, that link's
 face is changed to `hackernews-link-visited'."
   :package-version '(hackernews . "0.5.0")
-  :group 'hackernews
   :type 'boolean)
 
 (defcustom hackernews-visited-links-file
@@ -214,7 +196,6 @@ face is changed to `hackernews-link-visited'."
   "Name of file used to remember which links have been visited.
 When nil, visited links are not persisted across sessions."
   :package-version '(hackernews . "0.5.0")
-  :group 'hackernews
   :type '(choice file (const :tag "None" nil)))
 
 ;;;; Internal definitions
@@ -621,7 +602,6 @@ key		binding
 Official major mode key bindings:
 
 \\{hackernews-mode-map}"
-  :group 'hackernews
   :interactive nil
   (setq hackernews--feed-state ())
   (setq truncate-lines t)
