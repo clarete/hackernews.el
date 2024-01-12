@@ -489,7 +489,7 @@ which see."
   ;; earlier versions can't return the result of `make-text-button'.
   ;; Emacs 28.1 started modifying a copy of BEG when it's a string, so
   ;; subsequent versions must return the result of `make-text-button'.
-  (if (version< "24.3" emacs-version)
+  (if (version<= "24.4" emacs-version)
       #'make-text-button
     (lambda (beg end &rest properties)
       (apply #'make-text-button beg end properties)
@@ -614,14 +614,16 @@ Official major mode key bindings:
 
 ;;;; Retrieval
 
+;; At top level for Emacs < 24.4.
+(defvar json-array-type)
+(defvar json-object-type)
+(declare-function json-read "json" ())
+
 (defalias 'hackernews--parse-json
   (if (fboundp 'json-parse-buffer)
       (lambda ()
         (json-parse-buffer :object-type 'alist))
     (require 'json)
-    (defvar json-array-type)
-    (defvar json-object-type)
-    (declare-function json-read "json")
     (lambda ()
       (let ((json-array-type  'vector)
             (json-object-type 'alist))
