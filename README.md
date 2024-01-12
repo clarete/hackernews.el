@@ -10,7 +10,7 @@ News](https://news.ycombinator.com/).  It uses a HTTP
 
 ## Interface
 
-Version 0.6.1 of the `hackernews` package is able to fetch stories
+Version 0.7.0 of the `hackernews` package is able to fetch stories
 from six different Hacker News feeds, namely top, new, best, ask, show
 and job stories.  The default feed is top stories, which corresponds
 to the Hacker News homepage.
@@ -165,7 +165,8 @@ JSON parsing are probably due to bugs in older Emacsen.  The minimum
 recommended Emacs version for `hackernews` is 25.  Emacs 24 should
 work, but suffers from network security vulnerabilities that were
 fixed in version 25.  Emacs 23 is no longer officially supported as of
-[2018-06-08](https://github.com/clarete/hackernews.el/issues/46).
+[2018-06-08](https://github.com/clarete/hackernews.el/issues/46),
+i.e. since `hackernews` version 0.5.0.
 
 In any case, please report any problems on the project's [issue
 tracker](https://github.com/clarete/hackernews.el/issues), so that the
@@ -173,7 +174,7 @@ possibility for mitigation can be investigated.
 
 ## License
 
-Copyright (C) 2012-2023 The Hackernews.el Authors
+Copyright (C) 2012-2024 The Hackernews.el Authors
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
