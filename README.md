@@ -1,5 +1,6 @@
 # Simple Hacker News Emacs Client
 
+[![Build](https://github.com/clarete/hackernews.el/actions/workflows/build.yml/badge.svg)](https://github.com/clarete/hackernews.el/actions/workflows/build.yml)
 [![MELPA](https://melpa.org/packages/hackernews-badge.svg)](https://melpa.org/#/hackernews)
 [![MELPA Stable](https://stable.melpa.org/packages/hackernews-badge.svg)](https://stable.melpa.org/#/hackernews)
 

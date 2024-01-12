@@ -4,6 +4,7 @@ appreciation for their public spirit, we list here in alphabetical
 order a condensed list of their contributions.
 
 Basil L. Contovounesios: wrote .dir-locals.el
+  .github/workflows/build.yml
 and added AUTHORS
 and changed .gitignore Makefile README.md Screenshot.png
   hackernews-pkg.el hackernews.el
