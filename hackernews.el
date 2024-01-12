@@ -383,7 +383,8 @@ On error, display a warning for the user and return nil."
     (condition-case err
         (with-temp-buffer
           (insert-file-contents hackernews-visited-links-file)
-          (read (current-buffer)))
+          (unless (eobp)
+            (read (current-buffer))))
       (error
        (ignore
         (lwarn 'hackernews :error
@@ -421,6 +422,18 @@ risks being overwritten next time Emacs is killed."
                      (puthash k newv table))))
                (cdr entry)))))
 
+(defalias 'hackernews--prin1
+  (if (condition-case nil
+          (with-no-warnings (prin1 t #'ignore ()))
+        (wrong-number-of-arguments))
+      #'prin1
+    (lambda (object &optional printcharfun _overrides)
+      (let ((print-length nil)
+            (print-level nil))
+        (prin1 object printcharfun))))
+  "Compatibility shim for default `prin1' overrides in Emacs < 29.
+\n(fn OBJECT &optional PRINTCHARFUN OVERRIDES)")
+
 (defun hackernews-save-visited-links ()
   "Write visited links to `hackernews-visited-links-file'."
   (when hackernews-visited-links-file
@@ -430,7 +443,7 @@ risks being overwritten next time Emacs is killed."
             ;; Ensure any parent directories exist
             (when dir (make-directory dir t)))
           (hackernews-load-visited-links)
-          (prin1 hackernews--visited-ids (current-buffer)))
+          (hackernews--prin1 hackernews--visited-ids (current-buffer) t))
       (error (lwarn 'hackernews :error
                     "Could not write `hackernews-visited-links-file': %s"
                     (error-message-string err))))))
