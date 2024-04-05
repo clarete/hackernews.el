@@ -154,7 +154,12 @@ If you prefer to roll out your own Elisp, you could add to your
 `user-init-file` something as simple as:
 
 ```el
-(push '("\\`\\*hackernews .*\\*\\'" (display-buffer-same-window))
+(push '("\\`\\*hackernews .*\\*\\'" display-buffer-same-window)
+      display-buffer-alist)
+
+;; ...or equivalently, starting with Emacs 30:
+
+(push '((category . hackernews) display-buffer-same-window)
       display-buffer-alist)
 ```
 

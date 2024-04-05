@@ -578,7 +578,7 @@ their respective URLs."
     ;; Persist new offset
     (setcar reg (+ (car reg) nitem)))
 
-  (pop-to-buffer (current-buffer))
+  (pop-to-buffer (current-buffer) '(() (category . hackernews)))
   (run-hooks 'hackernews-finalize-hook))
 
 ;; TODO: Derive from `tabulated-list-mode'?
