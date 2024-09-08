@@ -81,7 +81,8 @@
   'hackernews-items-per-page "0.4.0")
 
 (defcustom hackernews-items-per-page 20
-  "Default number of stories to retrieve in one go."
+  "Default number of stories to retrieve in one go.
+If nil, the stories will fill the window."
   :package-version '(hackernews . "0.4.0")
   :type 'integer)
 
@@ -700,9 +701,10 @@ rendered at the end of the hackernews buffer."
       (hackernews--put :register (cons offset ids))
       (hackernews--put :items    (make-vector
                                   (max 0 (min (- (length ids) offset)
-                                              (if n
-                                                  (prefix-numeric-value n)
-                                                hackernews-items-per-page)))
+                                              (cond
+                                               (n (prefix-numeric-value n))
+                                               (hackernews-items-per-page)
+                                               (t (1- (window-text-height))))))
                                   ()))
 
       (hackernews--retrieve-items)
