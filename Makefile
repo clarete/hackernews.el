@@ -1,10 +1,10 @@
-EMACS   ?= emacs
-PACKAGE := hackernews
-RM      ?= rm -f
+EMACS ?= emacs
+RM ?= rm -f
 
-%.elc: %.el
-	$(EMACS) --quick --batch --funcall=batch-byte-compile $<
+els := hackernews.el
+elcs := $(els:.el=.elc)
 
+.PHONY: all
 all: lisp
 
 .PHONY: help
@@ -19,10 +19,14 @@ help:
 
 .PHONY: emacs-Q
 emacs-Q:
-	$(EMACS) --quick --load=$(PACKAGE).el
+	$(EMACS) -Q -l $(els)
 
-lisp: $(PACKAGE).elc
+.PHONY: lisp
+lisp: $(elcs)
 
 .PHONY: clean
 clean:
-	$(RM) $(PACKAGE).elc
+	$(RM) $(elcs)
+
+%.elc: %.el
+	$(EMACS) -Q -batch -f batch-byte-compile $<
