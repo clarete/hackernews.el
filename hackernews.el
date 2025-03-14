@@ -34,6 +34,13 @@
 (require 'format-spec)
 (require 'url)
 
+(eval-when-compile
+  ;; - 24.3 started complaining about unknown `declare' props.
+  ;; - 28 introduced `modes'.
+  (and (boundp 'defun-declarations-alist)
+       (null (assq 'modes defun-declarations-alist))
+       (push (list 'modes #'ignore) defun-declarations-alist)))
+
 (defgroup hackernews nil
   "Simple Hacker News client."
   :group 'external
