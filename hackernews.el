@@ -5,7 +5,7 @@
 ;; Author: Lincoln de Sousa <lincoln@clarete.li>
 ;; Maintainer: Basil L. Contovounesios <basil@contovou.net>
 ;; Keywords: comm hypermedia news
-;; Version: 0.7.0
+;; Version: 0.7.1
 ;; URL: https://github.com/clarete/hackernews.el
 
 ;; This program is free software; you can redistribute it and/or modify
