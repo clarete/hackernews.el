@@ -594,7 +594,7 @@ their respective URLs."
 
 Summary of key bindings:
 
-key		binding
+Key		Binding
 ---		-------
 \\<hackernews-button-map>
 \\[push-button]\
@@ -616,11 +616,10 @@ key		binding
 		Reload stories.
 \\[hackernews-switch-feed]\
 		Prompt user for a feed to switch to.
-\\[quit-window]\
+\\<special-mode-map>\\[quit-window]\
 		Quit.
 
 Official major mode key bindings:
-
 \\{hackernews-mode-map}"
   :interactive nil
   (setq hackernews--feed-state ())
