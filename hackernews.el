@@ -1,11 +1,12 @@
-;;; hackernews.el --- Hacker News Client for Emacs -*- lexical-binding: t -*-
+;;; hackernews.el --- Hacker News Client -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2012-2025 The Hackernews.el Authors
 
 ;; Author: Lincoln de Sousa <lincoln@clarete.li>
 ;; Maintainer: Basil L. Contovounesios <basil@contovou.net>
 ;; Keywords: comm hypermedia news
-;; Version: 0.7.1
+;; Version: 0.8.0
+;; Package-Requires: ((emacs "24.3") (visual-fill-column "2.2"))
 ;; URL: https://github.com/clarete/hackernews.el
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -33,6 +34,9 @@
 (require 'cus-edit)
 (require 'format-spec)
 (require 'url)
+(require 'widget)
+(require 'wid-edit)
+(require 'cl-lib)
 
 (eval-when-compile
   ;; - 24.3 started complaining about unknown `declare' props.
@@ -81,6 +85,44 @@
   '((t :inherit default))
   "Face used for the score of a story."
   :package-version '(hackernews . "0.4.0"))
+
+;; Faces for modern UI style
+
+(defface hackernews-logo
+  '((t :foreground "#ff6600" :height 1.5))
+  "Face used for the \"Y\" in the Hacker News logo.
+Only used when `hackernews-ui-style' is \\='modern."
+  :package-version '(hackernews . "0.8.0"))
+
+(defface hackernews-title-text
+  '((t :foreground "#ff6600" :height 1.3))
+  "Face used for the \"Hacker News\" title text.
+Only used when `hackernews-ui-style' is \\='modern."
+  :package-version '(hackernews . "0.8.0"))
+
+(defface hackernews-separator
+  '((t :foreground "#666666"))
+  "Face used for horizontal separator lines.
+Only used when `hackernews-ui-style' is \\='modern."
+  :package-version '(hackernews . "0.8.0"))
+
+(defface hackernews-score-modern
+  '((t :foreground "#ff6600"))
+  "Face used for story scores in modern UI.
+Only used when `hackernews-ui-style' is \\='modern."
+  :package-version '(hackernews . "0.8.0"))
+
+(defface hackernews-author
+  '((t :foreground "#0066cc"))
+  "Face used for author names.
+Only used when `hackernews-ui-style' is \\='modern."
+  :package-version '(hackernews . "0.8.0"))
+
+(defface hackernews-feed-indicator
+  '((t :foreground "#ff6600"))
+  "Face used for the current feed indicator.
+Only used when `hackernews-ui-style' is \\='modern."
+  :package-version '(hackernews . "0.8.0"))
 
 ;;;; User options
 
@@ -204,6 +246,31 @@ face is changed to `hackernews-link-visited'."
 When nil, visited links are not persisted across sessions."
   :package-version '(hackernews . "0.5.0")
   :type '(choice file (const :tag "None" nil)))
+
+(defcustom hackernews-ui-style 'classic
+  "Display style for the Hacker News interface.
+\\='classic - Minimal text-based interface using format strings.
+            This is the traditional interface, backward compatible
+            with all existing configurations.
+\\='modern  - Enhanced interface with interactive widgets, colors,
+            and visual separators for improved readability."
+  :package-version '(hackernews . "0.8.0")
+  :type '(choice (const :tag "Classic minimal interface" classic)
+                 (const :tag "Modern enhanced interface" modern)))
+
+(defcustom hackernews-display-width 80
+  "Maximum width for displaying hackernews content.
+Only used when `hackernews-ui-style' is \\='modern."
+  :package-version '(hackernews . "0.8.0")
+  :type 'integer)
+
+(defcustom hackernews-enable-emojis nil
+  "Whether to display emojis in the modern interface.
+When non-nil and `hackernews-ui-style' is \\='modern, feed navigation
+buttons and comment counts will include emoji icons for visual
+enhancement."
+  :package-version '(hackernews . "0.8.0")
+  :type 'boolean)
 
 ;;;; Internal definitions
 
@@ -326,6 +393,95 @@ This is intended as an :annotation-function in
   (let ((name (hackernews--feed-name feed)))
     (and name (concat " - " name))))
 
+
+;;;; UI Helpers for modern style
+
+(defconst hackernews--separator-char ?-
+  "Character used for horizontal separators in modern UI.")
+
+(defun hackernews--string-separator ()
+  "Return a string with the separator character."
+  (make-string hackernews-display-width hackernews--separator-char))
+
+(defun hackernews--insert-separator ()
+  "Insert a horizontal separator line using modern UI style."
+  (insert "\n")
+  (insert (propertize (hackernews--string-separator)
+                      'face 'hackernews-separator))
+  (insert "\n\n"))
+
+(defun hackernews--insert-logo ()
+  "Insert the Hacker News logo/header in modern UI style."
+  (insert "\n")
+  (insert (propertize "Y " 'face 'hackernews-logo))
+  (insert (propertize "Hacker News" 'face 'hackernews-title-text))
+  (insert "\n\n"))
+
+
+(defun hackernews--insert-header (feed-name)
+  "Insert the header for FEED-NAME in modern UI style."
+  (hackernews--insert-logo)
+
+  ;; Feed navigation buttons
+  (widget-create 'push-button
+                 :notify (lambda (&rest _)
+                           (hackernews-top-stories))
+                 :help-echo "View top stories"
+                 (format " %sTop " (if hackernews-enable-emojis "🔥 " "")))
+
+  (insert " ")
+
+  (widget-create 'push-button
+                 :notify (lambda (&rest _)
+                           (hackernews-new-stories))
+                 :help-echo "View new stories"
+                 (format " %sNew " (if hackernews-enable-emojis "🆕 " "")))
+
+  (insert " ")
+
+  (widget-create 'push-button
+                 :notify (lambda (&rest _)
+                           (hackernews-best-stories))
+                 :help-echo "View best stories"
+                 (format " %sBest " (if hackernews-enable-emojis "⭐ " "")))
+
+  (insert " ")
+
+  (widget-create 'push-button
+                 :notify (lambda (&rest _)
+                           (hackernews-ask-stories))
+                 :help-echo "View ask stories"
+                 (format " %sAsk " (if hackernews-enable-emojis "❓ " "")))
+
+  (insert " ")
+
+  (widget-create 'push-button
+                 :notify (lambda (&rest _)
+                           (hackernews-show-stories))
+                 :help-echo "View show stories"
+                 (format " %sShow " (if hackernews-enable-emojis "📺 " "")))
+
+  (insert " ")
+
+  (widget-create 'push-button
+                 :notify (lambda (&rest _)
+                           (hackernews-reload))
+                 :help-echo "Refresh current feed"
+                 " ↻ Refresh ")
+
+  ;; Current feed indicator
+  (insert "\n\n")
+  (insert (propertize (format "Showing: %s\n" feed-name)
+                      'face 'hackernews-feed-indicator))
+
+  ;; Keyboard shortcuts help
+  (insert "Keyboard: (n) Next | (p) Previous | (g) Refresh | (q) Quit\n")
+
+  (hackernews--insert-separator))
+
+
+
+
 ;;;; Motion
 
 (defun hackernews--forward-button (n type)
@@ -346,18 +502,53 @@ This is intended as an :annotation-function in
     (when msg (message "%s" msg))))
 
 (defun hackernews-next-item (&optional n)
-  "Move to Nth next story link (previous if N is negative).
+  "Move to Nth next story (previous if N is negative).
 N defaults to 1."
   (declare (modes hackernews-mode))
   (interactive "p")
-  ;; N is kept optional for backward compatibility
-  (hackernews--forward-button (or n 1) 'hackernews-link))
+  (if (eq hackernews-ui-style 'modern)
+      ;; Modern UI: search for separator lines
+      (let ((count (or n 1)))
+        (if (< count 0)
+            (hackernews-previous-item (- count))
+          (dotimes (_ count)
+            (let ((separator-regex (concat "^" (regexp-quote (hackernews--string-separator)) "$")))
+              (if (search-forward-regexp separator-regex nil t)
+                  (progn
+                    (forward-line 2)  ; Skip blank line to reach title
+                    (beginning-of-line)
+                    (recenter))  ; Center cursor vertically
+                (message "No more stories"))))))
+    ;; Classic UI: use original button navigation
+    (hackernews--forward-button (or n 1) 'hackernews-link)))
 
 (defun hackernews-previous-item (&optional n)
-  "Move to Nth previous story link (next if N is negative).
+  "Move to Nth previous story (next if N is negative).
 N defaults to 1."
+  (declare (modes hackernews-mode))
   (interactive "p")
-  (hackernews-next-item (- (or n 1))))
+  (if (eq hackernews-ui-style 'modern)
+      ;; Modern UI: search for separator lines
+      (let ((count (or n 1)))
+        (if (< count 0)
+            (hackernews-next-item (- count))
+          (dotimes (_ count)
+            (let ((separator-regex (concat "^" (regexp-quote (hackernews--string-separator)) "$")))
+              (search-backward-regexp separator-regex nil t)
+              (unless (search-backward-regexp separator-regex nil t)
+                (goto-char (point-min)))
+              (forward-line 2)  ; Skip blank line to reach title
+              (beginning-of-line)
+              (recenter)))))  ; Center cursor vertically
+    ;; Classic UI: use original button navigation (reverse direction)
+    (hackernews-next-item (- (or n 1)))))
+
+(defun hackernews-first-item ()
+  "Move point to first story link in hackernews buffer."
+  (declare (modes hackernews-mode))
+  (interactive)
+  (goto-char (point-min))
+  (hackernews-next-item))
 
 (defun hackernews-next-comment (&optional n)
   "Move to Nth next comments link (previous if N is negative).
@@ -372,13 +563,6 @@ N defaults to 1."
   (declare (modes hackernews-mode))
   (interactive "p")
   (hackernews-next-comment (- (or n 1))))
-
-(defun hackernews-first-item ()
-  "Move point to first story link in hackernews buffer."
-  (declare (modes hackernews-mode))
-  (interactive)
-  (goto-char (point-min))
-  (hackernews-next-item))
 
 ;;;; UI
 
@@ -477,7 +661,7 @@ If UNVISIT is non-nil, mark BUTTON as unvisited."
          (inhibit-read-only t))
     (puthash id val table)
     (when face
-      (button-put button 'font-lock-face (button-type-get type face))))
+      (button-put button 'face (button-type-get type face))))
   (funcall fn (button-get button 'shr-url)))
 
 (defun hackernews-browse-url-action (button)
@@ -526,13 +710,13 @@ This is for compatibility with various Emacs versions.
                                           'hackernews-visited-face
                                         'hackernews-face))))
     (hackernews--text-button label nil
-                             'type type 'font-lock-face face
+                             'type type 'face face
                              'id id 'help-echo url 'shr-url url)))
 
 (autoload 'xml-substitute-special "xml")
 
-(defun hackernews--render-item (item)
-  "Render Hacker News ITEM in current buffer.
+(defun hackernews--render-item-classic (item)
+  "Render Hacker News ITEM in current buffer using classic format.
 The user options `hackernews-score-format',
 `hackernews-title-format' and `hackernews-comments-format'
 control how each of the ITEM's score, title and comments count
@@ -545,12 +729,13 @@ their respective URLs."
          (score        (cdr (assq 'score       item)))
          (item-url     (cdr (assq 'url         item)))
          (descendants  (cdr (assq 'descendants item)))
-         (comments-url (hackernews--comments-url id)))
+         (comments-url (hackernews--comments-url id))
+         (item-start   (point)))
     (setq title (xml-substitute-special title))
     (insert
      (format-spec hackernews-item-format
                   `((?s . ,(propertize (format hackernews-score-format score)
-                                       'font-lock-face 'hackernews-score))
+                                       'face 'hackernews-score))
                     (?t . ,(hackernews--button-string
                             'hackernews-link
                             (format hackernews-title-format title)
@@ -561,32 +746,151 @@ their respective URLs."
                             (format hackernews-comments-format
                                     (or descendants 0))
                             comments-url
-                            id)))))))
+                            id)))))
+    ;; Add text property for unified navigation
+    (put-text-property item-start (point) 'hackernews-item-id id)))
+
+(defun hackernews--render-item-modern (item)
+  "Render Hacker News ITEM in current buffer using modern UI.
+The item is displayed with interactive widgets, styled text with
+faces, and visual separators for improved readability."
+  (let* ((id           (cdr (assq 'id          item)))
+         (title        (cdr (assq 'title       item)))
+         (score        (cdr (assq 'score       item)))
+         (by           (cdr (assq 'by          item)))
+         (item-url     (cdr (assq 'url         item)))
+         (descendants  (cdr (assq 'descendants item)))
+         (comments-url (hackernews--comments-url id))
+         (item-start   (point)))
+    (setq title (xml-substitute-special title))
+
+    ;; Title (make it a clickable widget)
+    (widget-create 'push-button
+                   :notify (lambda (&rest _)
+                             (browse-url (or item-url comments-url)))
+                   :help-echo (if item-url
+                                  (format "Open: %s" item-url)
+                                "No URL")
+                   :format "%[%v%]"
+                   title)
+
+    (insert "\n")
+
+    ;; Score, comments button, and author info
+    (insert (propertize "  " 'face 'default))
+    (insert (propertize (format "↑%d" (or score 0))
+                        'face 'hackernews-score-modern))
+    (insert " | ")
+
+    ;; Comments as clickable button
+    (widget-create 'push-button
+                   :notify (lambda (&rest _)
+                             (browse-url comments-url))
+                   :help-echo (format "View comments: %s" comments-url)
+                   :format "%[%v%]"
+                   (format "%s%d comment%s"
+                           (if hackernews-enable-emojis "💬 " "")
+                           (or descendants 0)
+                           (if (= (or descendants 0) 1) "" "s")))
+
+    ;; Author
+    (when by
+      (insert " | by ")
+      (insert (propertize by 'face 'hackernews-author)))
+
+    (insert "\n")
+    (hackernews--insert-separator)
+
+    ;; Mark the entire item range with a text property for navigation
+    (put-text-property item-start (point) 'hackernews-item-id id)))
+
+(defun hackernews--render-item (item)
+  "Render Hacker News ITEM in current buffer.
+The rendering style is determined by `hackernews-ui-style'."
+  (pcase hackernews-ui-style
+    ('classic (hackernews--render-item-classic item))
+    ('modern  (hackernews--render-item-modern item))
+    (_        (hackernews--render-item-classic item))))
+
+
+
 
 (defun hackernews--display-items ()
   "Render items associated with, and pop to, the current buffer."
-  (let* ((reg   (hackernews--get :register))
-         (items (hackernews--get :items))
-         (nitem (length items))
+  (let* ((reg          (hackernews--get :register))
+         (items        (hackernews--get :items))
+         (nitem        (length items))
+         (feed         (hackernews--get :feed))
+         (feed-name    (hackernews--feed-name feed))
+         (is-first-load (= (buffer-size) 0))
+         (is-modern    (eq hackernews-ui-style 'modern))
          (inhibit-read-only t))
 
-    ;; Render items
+    ;; Insert header for modern UI on first load
+    (when (and is-first-load is-modern)
+      (hackernews--insert-header feed-name))
+
+    ;; Render items (filter out null, deleted, and dead items)
     (run-hooks 'hackernews-before-render-hook)
     (save-excursion
       (goto-char (point-max))
-      (mapc #'hackernews--render-item items))
+      (mapc #'hackernews--render-item
+            (cl-remove-if (lambda (item)
+                            (or (eq item :null)
+                                (cdr (assq 'deleted item))
+                                (cdr (assq 'dead item))))
+                          items)))
     (run-hooks 'hackernews-after-render-hook)
 
+    ;; Setup widgets for modern UI
+    (when is-modern
+      ;; Create a composed keymap that combines widget functionality with mode bindings
+      ;; Priority: widget-keymap (for widget navigation) > hackernews-mode-map > special-mode-map
+      (use-local-map (make-composed-keymap (list widget-keymap hackernews-mode-map)
+                                            special-mode-map))
+      (widget-setup))
+
+    ;; Enable visual-fill-column for modern UI
+    (when is-modern
+      (when (and (require 'visual-fill-column nil t)
+                 (boundp 'visual-fill-column-width))
+        (setq-local visual-fill-column-width hackernews-display-width)
+        (setq-local visual-fill-column-center-text t)
+        (visual-fill-column-mode 1)))
+
+    ;; Disable line numbers
+    (when (fboundp 'display-line-numbers-mode)
+      (display-line-numbers-mode 0))
+
     ;; Adjust point
-    (unless (or (<= nitem 0) hackernews-preserve-point)
+    (cond
+     ;; First load with modern UI: jump to first widget
+     ((and is-first-load is-modern)
+      (goto-char (point-min))
+      (widget-forward 1))
+     ;; First load with classic UI: jump to first item
+     (is-first-load
+      (hackernews-first-item))
+     ;; Loading more items: move to first new item unless preserving point
+     ((not (or (<= nitem 0) hackernews-preserve-point))
       (goto-char (point-max))
-      (hackernews-previous-item nitem))
+      (hackernews-previous-item nitem)))
 
     ;; Persist new offset
     (setcar reg (+ (car reg) nitem)))
 
-  (pop-to-buffer (current-buffer) '(() (category . hackernews)))
+  ;; Enable read-only mode after all modifications
+  (when (eq hackernews-ui-style 'modern)
+    (read-only-mode 1))
+
+  ;; Display buffer with appropriate action based on UI style
+  (if (eq hackernews-ui-style 'modern)
+      ;; Modern UI: occupy full window
+      (pop-to-buffer (current-buffer) '((display-buffer-same-window)))
+    ;; Classic UI: default behavior (partial window)
+    (pop-to-buffer (current-buffer) '(() (category . hackernews))))
   (run-hooks 'hackernews-finalize-hook))
+
 
 ;; TODO: Derive from `tabulated-list-mode'?
 (define-derived-mode hackernews-mode special-mode "HN"
@@ -625,6 +929,7 @@ Official major mode key bindings:
   (setq hackernews--feed-state ())
   (setq truncate-lines t)
   (buffer-disable-undo))
+
 
 (defun hackernews--ensure-major-mode ()
   "Barf if current buffer is not derived from `hackernews-mode'."
@@ -698,8 +1003,12 @@ rendered at the end of the hackernews buffer."
 
     (with-current-buffer (get-buffer-create (format "*hackernews %s*" name))
       (unless append
+        ;; Clear buffer
         (let ((inhibit-read-only t))
           (erase-buffer))
+        (remove-overlays)
+
+        ;; Activate hackernews-mode (which calls kill-all-local-variables)
         (hackernews-mode))
 
       (hackernews--put :feed     feed)

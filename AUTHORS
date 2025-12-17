@@ -3,6 +3,9 @@ hackernews.el Hacker News client for GNU Emacs.  To show our
 appreciation for their public spirit, we list here in alphabetical
 order a condensed list of their contributions.
 
+Andros Fenollosa: changed hackernews.el to add widget-based UI with
+  visual-fill-column support and modern design
+
 Basil L. Contovounesios: wrote .dir-locals.el
   .github/workflows/build.yml
 and added AUTHORS

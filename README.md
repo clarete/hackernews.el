@@ -10,31 +10,35 @@ News](https://news.ycombinator.com/).  It uses a HTTP
 
 ## Interface
 
-Version 0.7.1 of the `hackernews` package is able to fetch stories
+Version 0.8.0 of the `hackernews` package is able to fetch stories
 from six different Hacker News feeds, namely top, new, best, ask, show
 and job stories.  The default feed is top stories, which corresponds
 to the Hacker News homepage.
 
-The score, title, and comments count of each story is presented on a
-line of its own (see screenshot below), though this format is
-customizable.  Both the title and comments count strings are
-hyperlinked to the Hacker News page for the item (the one with the
-comments), unless the story links to an external page, in which case
-the title is hyperlinked to that instead.
+The interface features a modern, widget-based design.  Each story is
+displayed with a clickable title widget,
+followed by metadata (score, comments count, and author) in styled
+text with color coding.  Interactive buttons for accessing comments
+and external links are provided for each story, and stories are
+separated by horizontal dividers for easy reading.
 
-Clicking or typing <kbd>RET</kbd> on a link opens it with the command
+The header includes clickable navigation buttons for switching between
+feeds (Top, New, Best, Ask, Show) and refreshing the current feed.
+Content is centered and formatted to a configurable width (default 80
+characters) for optimal readability.  If the
+[`visual-fill-column`](https://github.com/joostkremers/visual-fill-column)
+package is installed, it will be used to center the content
+automatically.
+
+Clicking or typing <kbd>RET</kbd> on a widget opens it with the
+command
 [`browse-url`](https://gnu.org/software/emacs/manual/html_node/emacs/Browse_002dURL.html),
 which selects a browser based on the user option
 `browse-url-browser-function`.  This defaults to the system's default
-browser.
-
-Typing <kbd>t</kbd> on a link first tries to open it in
-[`eww`](https://gnu.org/software/emacs/manual/html_node/eww/index.html),
-if available, and otherwise passes it to the command
-`browse-url-text-emacs`, which consults the user option
-`browse-url-text-browser`.  This defaults to running `lynx` within
-Emacs.  Keep in mind that some websites do not render well in text
-mode.
+browser.  Comment buttons use the user option
+`hackernews-internal-browser-function`, which defaults to
+[`eww`](https://gnu.org/software/emacs/manual/html_node/eww/index.html)
+for in-Emacs browsing.
 
 A future `hackernews` version may support upvoting and interacting
 with comments.
@@ -43,14 +47,14 @@ with comments.
 
 | Key              | Description                                  |
 |------------------|----------------------------------------------|
-| <kbd>RET</kbd>   | Open link in default (external) browser      |
+| <kbd>RET</kbd>   | Activate widget at point (open link/button)  |
 | <kbd>t</kbd>     | Open link in text-based browser within Emacs |
 | <kbd>r</kbd>     | Mark link as visited                         |
 | <kbd>R</kbd>     | Mark link as unvisited                       |
-| <kbd>n</kbd>     | Move to next title link                      |
-| <kbd>p</kbd>     | Move to previous title link                  |
-| <kbd>TAB</kbd>   | Move to next comments count link             |
-| <kbd>S-TAB</kbd> | Move to previous comments count link         |
+| <kbd>n</kbd>     | Move to next story                           |
+| <kbd>p</kbd>     | Move to previous story                       |
+| <kbd>TAB</kbd>   | Move to next widget (buttons, links, etc.)   |
+| <kbd>S-TAB</kbd> | Move to previous widget                      |
 | <kbd>m</kbd>     | Load more stories                            |
 | <kbd>g</kbd>     | Reload stories                               |
 | <kbd>f</kbd>     | Prompt user for a feed to switch to          |
@@ -120,6 +124,39 @@ slows down startup):
 (require 'hackernews)
 ```
 
+## Configuration Examples
+
+### Classic Mode (Default)
+
+The classic mode provides a minimal, text-based interface with no additional configuration needed:
+
+```el
+(use-package hackernews
+  :ensure t)
+```
+
+### Modern Mode with Visual Enhancements
+
+The modern mode offers an enhanced interface with widgets, colors, and centered content:
+
+```el
+;; Install visual-fill-column for centered display
+(use-package visual-fill-column
+  :ensure t)
+
+;; Configure hackernews with modern UI
+(use-package hackernews
+  :ensure t
+  :config
+  ;; Use modern UI with enhanced visual elements
+  (setq hackernews-ui-style 'modern)
+  ;; Enable emoji icons in the interface
+  (setq hackernews-enable-emojis t)
+  ;; Optional: customize display width (default 80)
+  ;; (setq hackernews-display-width 100)
+  )
+```
+
 ## Usage
 
 Just run <kbd>M-x</kbd>`hackernews`<kbd>RET</kbd>.  This reads the
@@ -141,27 +178,26 @@ by adding the following to your `user-init-file`:
 You can list and modify all custom faces and variables by typing
 <kbd>M-x</kbd>`customize-group`<kbd>RET</kbd>`hackernews`<kbd>RET</kbd>.
 
-All `hackernews` buffers are displayed using the `pop-to-buffer`
-function for increased compatibility and customizability in how
-windows and frames are re/used.  This function displays buffers in a
-new window by default.  The simplest way to instead reuse the current
-window for `hackernews` buffers is to customize one of the user
-options `same-window-buffer-names`, `same-window-regexp` or in Emacs
-24 and subsequent versions, `display-buffer-alist` via
-<kbd>M-x</kbd>`customize-group`<kbd>RET</kbd>`windows`<kbd>RET</kbd>.
+Key customization options:
 
-If you prefer to roll out your own Elisp, you could add to your
-`user-init-file` something as simple as:
+- `hackernews-ui-style` (default `'classic`): Choose between
+  `'classic` (minimal text-based interface) or `'modern` (enhanced
+  widget-based interface with colors and visual separators).
 
-```el
-(push '("\\`\\*hackernews .*\\*\\'" display-buffer-same-window)
-      display-buffer-alist)
+- `hackernews-display-width` (default 80): Maximum width for
+  displaying content in modern mode.  Content is automatically
+  centered when
+  [`visual-fill-column`](https://github.com/joostkremers/visual-fill-column)
+  is installed.
 
-;; ...or equivalently, starting with Emacs 30:
+- `hackernews-enable-emojis` (default nil): Whether to display emojis
+  in the modern interface.  When non-nil, feed navigation buttons
+  (Top, New, Best, Ask, Show) and comment counts will include emoji
+  icons for visual enhancement.
 
-(push '((category . hackernews) display-buffer-same-window)
-      display-buffer-alist)
-```
+In modern mode, buffers are displayed using `display-buffer-same-window`
+for a full-screen experience.  Classic mode uses the traditional display
+behavior.
 
 ### Troubleshooting
 
